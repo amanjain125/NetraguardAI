@@ -17,7 +17,7 @@ interface Props {
 }
 
 export const PatientFriendlyReport: React.FC<Props> = ({ result, onPrint }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   const isReferable = result.referable;
 
@@ -29,7 +29,7 @@ export const PatientFriendlyReport: React.FC<Props> = ({ result, onPrint }) => {
           <div>
             <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-white/10 backdrop-blur-xs text-xs font-medium text-sky-200 mb-2">
               <HeartHandshake className="w-3.5 h-3.5" />
-              <span>Accessible Eye Health Guidance</span>
+              <span>{t.patientReport.accessibleBadge}</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
               {t.patientReport.heading}
@@ -42,7 +42,7 @@ export const PatientFriendlyReport: React.FC<Props> = ({ result, onPrint }) => {
           {/* Right Action: Language Switcher for Patient Guidance */}
           <div className="flex flex-col items-start sm:items-end gap-2 bg-white/10 p-3 rounded-2xl backdrop-blur-xs">
             <span className="text-[11px] text-sky-200 font-medium">
-              Select Patient Language:
+              {t.patientReport.selectLanguage}
             </span>
             <LanguageSelector />
           </div>
@@ -51,20 +51,20 @@ export const PatientFriendlyReport: React.FC<Props> = ({ result, onPrint }) => {
         {/* Patient Identification strip */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-6 text-xs">
           <div>
-            <span className="text-sky-300 block text-[11px]">Patient Identification</span>
+            <span className="text-sky-300 block text-[11px]">{t.patientReport.patientIdLabel}</span>
             <span className="font-bold text-white font-mono text-sm">{result.patientId}</span>
           </div>
           <div>
-            <span className="text-sky-300 block text-[11px]">Screening Date</span>
-            <span className="font-semibold text-white">{formatDate(result.timestamp)}</span>
+            <span className="text-sky-300 block text-[11px]">{t.patientReport.screeningDateLabel}</span>
+            <span className="font-semibold text-white">{formatDate(result.timestamp, language)}</span>
           </div>
           <div>
-            <span className="text-sky-300 block text-[11px]">Health Center</span>
-            <span className="font-semibold text-white">{result.centerLocation || 'Primary Health Center'}</span>
+            <span className="text-sky-300 block text-[11px]">{t.patientReport.healthCenterLabel}</span>
+            <span className="font-semibold text-white">{result.centerLocation || t.patientReport.primaryHealthCenter}</span>
           </div>
           <div>
-            <span className="text-sky-300 block text-[11px]">Patient Demographics</span>
-            <span className="font-semibold text-white">{result.patientAge ? `${result.patientAge} Yrs / ${result.patientGender}` : 'Recorded'}</span>
+            <span className="text-sky-300 block text-[11px]">{t.patientReport.demographicsLabel}</span>
+            <span className="font-semibold text-white">{result.patientAge ? `${result.patientAge} ${t.patientReport.yearsOld} / ${result.patientGender}` : t.patientReport.recorded}</span>
           </div>
         </div>
       </div>
@@ -90,8 +90,8 @@ export const PatientFriendlyReport: React.FC<Props> = ({ result, onPrint }) => {
                 isReferable ? 'text-amber-950' : 'text-emerald-950'
               }`}>
                 {isReferable
-                  ? 'Retinal Changes Detected (Specialist Checkup Advised)'
-                  : 'No Significant Retinal Damage Detected'}
+                  ? t.patientReport.referralTitle
+                  : t.patientReport.healthyTitle}
               </h3>
               <p className="text-sm text-slate-700 mt-2 leading-relaxed">
                 {isReferable
@@ -114,8 +114,8 @@ export const PatientFriendlyReport: React.FC<Props> = ({ result, onPrint }) => {
             </h4>
             <p className="text-xs text-slate-600 leading-relaxed">
               {isReferable
-                ? 'High blood sugar over time can weaken microscopic blood vessels in the back of your eye. Early care stops these changes from harming your vision.'
-                : 'Your retina currently looks healthy. However, because diabetes can affect eyes gradually, routine annual screening is critical to keep it that way.'}
+                ? t.patientReport.whatMeansReferable
+                : t.patientReport.whatMeansHealthy}
             </p>
           </div>
 
@@ -131,16 +131,16 @@ export const PatientFriendlyReport: React.FC<Props> = ({ result, onPrint }) => {
               {isReferable ? (
                 <>
                   <p className="font-semibold text-slate-900">
-                    Visit an eye doctor (Ophthalmologist) within 3-4 weeks.
+                    {t.patientReport.nextStepsReferableTitle}
                   </p>
-                  <p>A dilated eye examination will be performed to protect your eyesight.</p>
+                  <p>{t.patientReport.nextStepsReferableDesc}</p>
                 </>
               ) : (
                 <>
                   <p className="font-semibold text-slate-900">
-                    Schedule your next retinal photo in 12 months.
+                    {t.patientReport.nextStepsHealthyTitle}
                   </p>
-                  <p>Continue your prescribed diabetes diet, medication, and daily walks.</p>
+                  <p>{t.patientReport.nextStepsHealthyDesc}</p>
                 </>
               )}
             </div>
@@ -155,9 +155,9 @@ export const PatientFriendlyReport: React.FC<Props> = ({ result, onPrint }) => {
               {t.patientReport.importantInfo}
             </h4>
             <ul className="text-xs text-slate-600 space-y-1.5 list-disc pl-4">
-              <li>Keep your blood sugar (HbA1c &lt; 7%) and blood pressure controlled.</li>
-              <li>Do not wait for blurry vision or pain before getting your eyes checked.</li>
-              <li>Show this report card to your local medical officer or ASHA worker.</li>
+              <li>{t.patientReport.tip1}</li>
+              <li>{t.patientReport.tip2}</li>
+              <li>{t.patientReport.tip3}</li>
             </ul>
           </div>
         </div>
@@ -166,7 +166,7 @@ export const PatientFriendlyReport: React.FC<Props> = ({ result, onPrint }) => {
         <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <div className="flex items-center gap-2">
             <PhoneCall className="w-4 h-4 text-sky-600" />
-            <span>Questions? Contact your nearest Vision Center or Primary Health Center coordinator.</span>
+            <span>{t.patientReport.footerQuestions}</span>
           </div>
 
           <button
@@ -175,7 +175,7 @@ export const PatientFriendlyReport: React.FC<Props> = ({ result, onPrint }) => {
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-medium shadow-xs transition-colors"
           >
             <Printer className="w-4 h-4" />
-            <span>Print Patient Guidance Card</span>
+            <span>{t.patientReport.printCard}</span>
           </button>
         </div>
       </div>

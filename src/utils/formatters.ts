@@ -1,9 +1,15 @@
 import type { DiabeticRetinopathyGrade, ClinicalReviewStatus } from '../types/screening';
 
-export const formatDate = (dateString: string): string => {
+export const formatDate = (dateString: string, langCode: string = 'en'): string => {
   try {
     const d = new Date(dateString);
-    return d.toLocaleDateString('en-IN', {
+    const localeMap: Record<string, string> = {
+      kn: 'kn-IN',
+      hi: 'hi-IN',
+      en: 'en-IN',
+    };
+    const locale = localeMap[langCode] || 'en-IN';
+    return d.toLocaleDateString(locale, {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
