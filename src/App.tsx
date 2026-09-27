@@ -13,7 +13,7 @@ import { SplashScreen } from './components/common/SplashScreen';
 import { DEMO_SCREENING_RECORDS } from './data/demoData';
 import type { ScreeningResult } from './types/screening';
 import type { DoctorProfile } from './types/auth';
-import { DEMO_DOCTORS } from './types/auth';
+import { getRegisteredDoctors } from './types/auth';
 
 export const App: React.FC = () => {
   // Splash screen state: starts on initial site open
@@ -30,10 +30,11 @@ export const App: React.FC = () => {
       try {
         return JSON.parse(saved);
       } catch {
-        return DEMO_DOCTORS[0];
+        return null;
       }
     }
-    return DEMO_DOCTORS[0];
+    const registered = getRegisteredDoctors();
+    return registered.length > 0 ? registered[0] : null;
   });
 
   const [currentPage, setCurrentPage] = useState<PageRoute>(() => {

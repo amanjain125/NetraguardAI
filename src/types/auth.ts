@@ -9,23 +9,24 @@ export interface DoctorProfile {
   avatarUrl?: string;
 }
 
-export const DEMO_DOCTORS: DoctorProfile[] = [
-  {
-    id: 'DOC-KA-4102',
-    name: 'Dr. Kalyani Sharma',
-    email: 'dr.kalyani@netraguard.ai',
-    role: 'Chief Ophthalmologist',
-    specialty: 'Vitreoretinal Specialist (MD, FRCS)',
-    hospital: 'AIIMS Apex Eye Centre & Diabetic Retinopathy Clinic',
-    registrationNumber: 'KMC-89421',
-  },
-  {
-    id: 'DOC-KA-7781',
-    name: 'Dr. Aman Jain',
-    email: 'dr.aman@netraguard.ai',
-    role: 'Senior Retinal Consultant',
-    specialty: 'Ophthalmic Surgery & DR Tele-screening (MS)',
-    hospital: 'National Rural Eye Care Mission (District KA-04)',
-    registrationNumber: 'MMC-65103',
-  },
-];
+const REGISTERED_DOCTORS_KEY = 'netraguard_registered_doctors';
+
+export function getRegisteredDoctors(): DoctorProfile[] {
+  try {
+    const data = localStorage.getItem(REGISTERED_DOCTORS_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveRegisteredDoctor(doctor: DoctorProfile): void {
+  try {
+    const list = getRegisteredDoctors();
+    const filtered = list.filter(d => d.email.toLowerCase() !== doctor.email.toLowerCase());
+    filtered.push(doctor);
+    localStorage.setItem(REGISTERED_DOCTORS_KEY, JSON.stringify(filtered));
+  } catch (e) {
+    console.error('Failed to save doctor', e);
+  }
+}
