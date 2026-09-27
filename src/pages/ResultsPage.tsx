@@ -209,7 +209,9 @@ export const ResultsPage: React.FC<Props> = ({ result, onNavigate }) => {
             gradCamAvailable={result.gradCamAvailable}
             gradCamLayer={result.gradCamLayer}
             gradCamSource={result.gradCamSource}
+            gradCamMethod={result.gradCamMethod}
             gradCamError={result.gradCamError}
+            debug={result.debug}
             prediction={result.prediction}
             confidence={result.confidence}
           />

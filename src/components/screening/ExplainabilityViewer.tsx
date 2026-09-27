@@ -10,10 +10,12 @@ interface Props {
   gradCamAvailable?: boolean;
   gradCamLayer?: string;
   gradCamSource?: string;
+  gradCamMethod?: string;
   gradCamError?: string;
   prediction?: string;
   confidence?: number;
   interactiveBlend?: boolean;
+  debug?: Record<string, any>;
 }
 
 export type ExplainabilityTab = 'overlay' | 'heatmap' | 'original' | 'side-by-side';
@@ -26,15 +28,18 @@ export const ExplainabilityViewer: React.FC<Props> = ({
   gradCamAvailable = true,
   gradCamLayer = 'res5b_relu',
   gradCamSource,
+  gradCamMethod = 'CAM',
   gradCamError,
   prediction,
   confidence,
   interactiveBlend = true,
+  debug,
 }) => {
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<ExplainabilityTab>('overlay');
   const [overlayOpacity, setOverlayOpacity] = useState<number>(75);
   const [showAnatomicalLabels, setShowAnatomicalLabels] = useState<boolean>(true);
+  const [showDebug, setShowDebug] = useState<boolean>(false);
 
   // Effective image URLs
   const effectiveOverlay = gradCamOverlay || gradCamImage;
@@ -54,9 +59,14 @@ export const ExplainabilityViewer: React.FC<Props> = ({
               {t.explainability.title}
             </h3>
             {isAvailable && (
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-sky-100 text-sky-800 border border-sky-200">
-                Layer: {gradCamLayer}
-              </span>
+              <>
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-sky-100 text-sky-800 border border-sky-200">
+                  Method: {gradCamMethod}
+                </span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-100 text-slate-700 border border-slate-200">
+                  Layer: {gradCamLayer}
+                </span>
+              </>
             )}
           </div>
           <p className="text-xs text-slate-500 mt-1">
@@ -352,9 +362,22 @@ export const ExplainabilityViewer: React.FC<Props> = ({
         {/* Explainability Technical Callout */}
         <div className="mt-5 p-4 rounded-xl bg-sky-50/70 border border-sky-100 flex items-start gap-3">
           <Info className="w-4 h-4 text-sky-700 shrink-0 mt-0.5" />
-          <div className="text-xs text-slate-700 leading-relaxed">
-            <strong className="text-sky-950 font-semibold">ResNet-18 Explainability Architecture: </strong>
-            Activation heatmap is produced by computing gradients and feature map activations at the final residual block (<code className="text-sky-900 font-mono">res5b_relu</code>), distinguishing anatomical regions influencing the classification.
+          <div className="text-xs text-slate-700 leading-relaxed flex-1">
+            <div className="flex items-center justify-between">
+              <strong className="text-sky-950 font-semibold">ResNet-18 Explainability Architecture: </strong>
+              {debug && (
+                <button
+                  type="button"
+                  onClick={() => setShowDebug(!showDebug)}
+                  className="text-[11px] font-mono font-semibold text-sky-700 underline hover:text-sky-900"
+                >
+                  {showDebug ? 'Hide Diagnostics' : 'Show Diagnostics'}
+                </button>
+              )}
+            </div>
+            <p className="mt-0.5">
+              Activation heatmap is generated from convolutional layer <code className="text-sky-900 font-mono">res5b_relu</code> using {gradCamMethod === 'CAM' ? 'Class Activation Mapping (CAM)' : 'Grad-CAM'}.
+            </p>
             {prediction && (
               <div className="mt-1.5 flex items-center gap-2 font-mono text-[11px] text-sky-900">
                 <CheckCircle className="w-3.5 h-3.5 text-sky-600" />
@@ -364,6 +387,25 @@ export const ExplainabilityViewer: React.FC<Props> = ({
             {gradCamSource && (
               <div className="mt-1 text-[10px] text-slate-500">
                 Source: {gradCamSource}
+              </div>
+            )}
+
+            {/* Debug Mode Panel */}
+            {debug && showDebug && (
+              <div className="mt-3 p-3 rounded-lg bg-slate-900 text-slate-200 text-[11px] font-mono space-y-1.5 border border-slate-800">
+                <div className="text-sky-400 font-bold border-b border-slate-700 pb-1">Mathematical Diagnostics (Debug Mode)</div>
+                <div>Predicted Class Index: <span className="text-amber-400">{debug.predictedClass}</span></div>
+                <div>Confidence: <span className="text-emerald-400">{debug.confidence}</span></div>
+                <div>Activation Tensor Shape: <span className="text-cyan-400">{JSON.stringify(debug.activationTensorShape)}</span></div>
+                <div>Gradient Tensor Shape: <span className="text-cyan-400">{JSON.stringify(debug.gradientTensorShape)}</span></div>
+                <div>Heatmap Range: <span className="text-rose-400">[{debug.heatmapMin}, {debug.heatmapMax}]</span></div>
+                <div>Selected Layer: <span className="text-purple-400">{debug.selectedExplainabilityLayer}</span></div>
+                <div>Method: <span className="text-sky-400">{debug.method}</span></div>
+                {debug.onnxRuntimeLimitation && (
+                  <div className="text-[10px] text-slate-400 mt-1 border-t border-slate-800 pt-1 leading-normal">
+                    Note: {debug.onnxRuntimeLimitation}
+                  </div>
+                )}
               </div>
             )}
           </div>

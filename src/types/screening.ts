@@ -57,7 +57,9 @@ export interface ScreeningResult {
   gradCamAvailable?: boolean;
   gradCamLayer?: string;
   gradCamSource?: string;
+  gradCamMethod?: string;
   gradCamError?: string;
+  debug?: Record<string, any>;
   
   // Clinical Workflow
   clinicalStatus: ClinicalReviewStatus;

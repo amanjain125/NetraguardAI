@@ -297,7 +297,9 @@ export const ScreeningPage: React.FC<Props> = ({ onNavigate, onSetSelectedResult
                   gradCamAvailable={liveResult.gradCAMAvailable}
                   gradCamLayer={liveResult.gradCAMLayer || 'res5b_relu'}
                   gradCamSource={liveResult.gradCAMSource || undefined}
+                  gradCamMethod={liveResult.gradCAMMethod || 'CAM'}
                   gradCamError={liveResult.gradCAMError || undefined}
+                  debug={liveResult.debug || undefined}
                   prediction={liveResult.predictedClassName}
                   confidence={liveResult.confidence}
                 />

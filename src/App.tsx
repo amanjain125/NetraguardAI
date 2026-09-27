@@ -8,10 +8,34 @@ import { ResultsPage } from './pages/ResultsPage';
 import { DoctorDashboardPage } from './pages/DoctorDashboardPage';
 import { HistoryPage } from './pages/HistoryPage';
 import { HowItWorksPage } from './pages/HowItWorksPage';
+import { DoctorLoginPage } from './pages/DoctorLoginPage';
+import { SplashScreen } from './components/common/SplashScreen';
 import { DEMO_SCREENING_RECORDS } from './data/demoData';
 import type { ScreeningResult } from './types/screening';
+import type { DoctorProfile } from './types/auth';
+import { DEMO_DOCTORS } from './types/auth';
 
 export const App: React.FC = () => {
+  // Splash screen state: starts on initial site open
+  const [showSplash, setShowSplash] = useState<boolean>(true);
+
+  // Doctor authentication state
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    return localStorage.getItem('netraguard_doctor_auth') === 'true';
+  });
+
+  const [currentDoctor, setCurrentDoctor] = useState<DoctorProfile | null>(() => {
+    const saved = localStorage.getItem('netraguard_doctor_profile');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return DEMO_DOCTORS[0];
+      }
+    }
+    return DEMO_DOCTORS[0];
+  });
+
   const [currentPage, setCurrentPage] = useState<PageRoute>(() => {
     const hash = window.location.hash.replace('#', '') as PageRoute;
     const validPages: PageRoute[] = ['home', 'screening', 'dashboard', 'history', 'how-it-works', 'results'];
@@ -44,6 +68,38 @@ export const App: React.FC = () => {
     setSelectedResult(record);
   };
 
+  const handleLoginSuccess = (doctor: DoctorProfile) => {
+    setIsAuthenticated(true);
+    setCurrentDoctor(doctor);
+    localStorage.setItem('netraguard_doctor_auth', 'true');
+    localStorage.setItem('netraguard_doctor_profile', JSON.stringify(doctor));
+    handleNavigate('home');
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    localStorage.removeItem('netraguard_doctor_auth');
+    localStorage.removeItem('netraguard_doctor_profile');
+  };
+
+  // 1. Initial Logo Splash Screen on site open
+  if (showSplash) {
+    return <SplashScreen onComplete={() => setShowSplash(false)} />;
+  }
+
+  // 2. Doctor Login Screen if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <LanguageProvider>
+        <DoctorLoginPage 
+          onLoginSuccess={handleLoginSuccess} 
+          onReplaySplash={() => setShowSplash(true)} 
+        />
+      </LanguageProvider>
+    );
+  }
+
+  // 3. Authenticated Clinical Application Pages
   const renderCurrentPage = () => {
     switch (currentPage) {
       case 'home':
@@ -85,7 +141,12 @@ export const App: React.FC = () => {
 
   return (
     <LanguageProvider>
-      <MainLayout currentPage={currentPage} onNavigate={handleNavigate}>
+      <MainLayout
+        currentPage={currentPage}
+        onNavigate={handleNavigate}
+        currentDoctor={currentDoctor}
+        onLogout={handleLogout}
+      >
         {renderCurrentPage()}
       </MainLayout>
     </LanguageProvider>

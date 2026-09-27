@@ -127,7 +127,9 @@ class ScreeningResponse(BaseModel):
     originalImageUrl: Optional[str] = None
     gradCAMLayer: Optional[str] = "res5b_relu"
     gradCAMSource: Optional[str] = None
+    gradCAMMethod: Optional[str] = "CAM"
     gradCAMError: Optional[str] = None
+    debug: Optional[dict] = None
 
 
 def to_base64_data_url(img: Image.Image, format: str = "JPEG") -> str:
@@ -158,22 +160,33 @@ def preprocess_image(image: Image.Image) -> np.ndarray:
 def compute_resnet18_gradcam(
     orig_img: Image.Image,
     fmap: np.ndarray,
-    predicted_class: int
-) -> tuple[Image.Image, Image.Image]:
+    predicted_class: int,
+    confidence: float = 0.0,
+) -> tuple[Image.Image, Image.Image, dict]:
     """
-    Computes authentic Grad-CAM for the predicted class at feature layer res5b_relu:
-    scoreMap = gradCAM(netDL, inputImageResized, predictedLabel, FeatureLayer="res5b_relu")
+    Computes authentic Class Activation Map (CAM) for the predicted class at feature layer res5b_relu.
     
-    1. Channel-wise weighting: w_k * A_k(x, y) where w_k is classifier weight for predicted class
-    2. ReLU activation: maximum(0, sum_k w_k * A_k)
-    3. Normalization: rescale(scoreMapOriginal) in range [0, 1]
-    4. Bilinear resize to original image dimensions [orig_h, orig_w]
-    5. Heatmap generation with colormap jet (matching MATLAB colormap jet)
-    6. Overlay generation: original + heatmap with alpha = 0.5 * scoreMapNorm (matching MATLAB h.AlphaData = 0.5 * scoreMapNorm)
+    Architectural Context:
+    In this ResNet-18 model, res5b_relu is immediately followed by:
+      pool5 (GlobalAveragePool) -> fc5 (Conv 1x1 / Linear) -> Flatten -> Softmax.
+    
+    Mathematical Equivalence (Selvaraju et al., 2017, Theorem 1):
+      Let S^c = sum_k (w_k^c * (1/Z * sum_{i,j} A_{k,i,j})) + b^c.
+      Analytical gradient dS^c / dA_{k,i,j} = w_k^c / Z (where Z = 7 * 7 = 49).
+      Spatial mean of gradients: alpha_k^c = (1/Z) * sum_{i,j} (w_k^c / Z) = w_k^c / 49.
+      Grad-CAM: ReLU(sum_k alpha_k^c * A_k) = (1/49) * ReLU(sum_k w_k^c * A_k) = (1/49) * CAM.
+      When normalized to [0, 1], the constant factor (1/49) cancels out:
+      norm(Grad-CAM) == norm(CAM).
+    
+    Why CAM rather than runtime dynamic backpropagation:
+      Standard ONNX Runtime (onnxruntime) is an inference-only forward engine. It does not
+      contain an autograd engine (like PyTorch backward() or tf.GradientTape()) to execute
+      dynamic backpropagation across arbitrary computational graphs at runtime.
+      Therefore, the implementation is accurately labeled "CAM" (Class Activation Mapping).
     """
     orig_w, orig_h = orig_img.size
     
-    # 512 classifier weights for predicted class
+    # 512 classifier weights for predicted class extracted from ONNX 'fc5_W'
     if fc5_weights is not None:
         w = fc5_weights[predicted_class, :, 0, 0]  # shape (512,)
     else:
@@ -182,38 +195,51 @@ def compute_resnet18_gradcam(
     # Activations from res5b_relu: shape (512, 7, 7)
     act = fmap  # (512, 7, 7)
 
-    # Linear combination
+    # Linear combination: CAM = sum_k (w_k^c * A_k)
     cam = np.tensordot(w, act, axes=(0, 0))  # shape (7, 7)
 
     # ReLU: only features having positive influence on the class
-    cam = np.maximum(cam, 0.0)
+    cam_relu = np.maximum(cam, 0.0)
 
     # Normalize to [0, 1]
     cam_min, cam_max = float(cam.min()), float(cam.max())
-    if cam_max > cam_min:
-        cam_norm = (cam - cam_min) / (cam_max - cam_min)
+    if cam_relu.max() > cam_relu.min():
+        cam_norm = (cam_relu - cam_relu.min()) / (cam_relu.max() - cam_relu.min())
     else:
-        cam_norm = np.zeros_like(cam)
+        cam_norm = np.zeros_like(cam_relu)
 
     # Resize score map to original image dimensions (matching MATLAB imresize)
     score_map_255 = (cam_norm * 255.0).astype(np.uint8)
     score_map_pil = Image.fromarray(score_map_255).resize((orig_w, orig_h), Image.Resampling.BILINEAR)
     score_map_orig = np.array(score_map_pil, dtype=np.float32) / 255.0
 
-    # 1. Grad-CAM Heatmap using JET colormap (matching MATLAB 'colormap jet')
+    # 1. Heatmap using JET colormap (matching MATLAB 'colormap jet')
     jet_cmap = matplotlib.colormaps["jet"]
     heatmap_rgba = jet_cmap(score_map_orig)  # Range 0.0 - 1.0, shape (H, W, 4)
     heatmap_rgb = (heatmap_rgba[:, :, :3] * 255.0).astype(np.uint8)
     heatmap_img = Image.fromarray(heatmap_rgb)
 
-    # 2. Grad-CAM Overlay (matching MATLAB: h.AlphaData = 0.5 * scoreMapNorm)
+    # 2. Overlay: alpha = 0.5 * scoreMapNorm (matching MATLAB: h.AlphaData = 0.5 * scoreMapNorm)
     orig_arr = np.array(orig_img, dtype=np.float32)
     alpha = (0.5 * score_map_orig)[:, :, np.newaxis]
     overlay_arr = (1.0 - alpha) * orig_arr + alpha * (heatmap_rgba[:, :, :3] * 255.0)
     overlay_arr = np.clip(overlay_arr, 0.0, 255.0).astype(np.uint8)
     overlay_img = Image.fromarray(overlay_arr)
 
-    return heatmap_img, overlay_img
+    # Debug report with analytical gradient tensor shape and activation shapes
+    debug_info = {
+        "predictedClass": predicted_class,
+        "confidence": round(float(confidence), 4),
+        "activationTensorShape": list(act.shape),
+        "gradientTensorShape": [int(act.shape[0]), int(act.shape[1]), int(act.shape[2])],
+        "heatmapMin": round(float(cam_min), 4),
+        "heatmapMax": round(float(cam_max), 4),
+        "selectedExplainabilityLayer": feature_layer_name,
+        "method": "CAM",
+        "onnxRuntimeLimitation": "Standard ONNX Runtime is forward-only (inference execution engine without autograd). Dynamic reverse-mode automatic differentiation is not supported at runtime. Because this ResNet-18 architecture uses GAP -> Linear Classifier, CAM uses fc5_W directly, which Theorem 1 in Selvaraju et al. (2017) proves is mathematically identical to Grad-CAM up to a constant scalar factor."
+    }
+
+    return heatmap_img, overlay_img, debug_info
 
 
 @app.get("/api/health", response_model=HealthResponse)
@@ -306,32 +332,37 @@ async def screen_retinal_image(
             screening_status = "Referable DR"
             referral_message = "Ophthalmologist review recommended"
 
-        # Generate Real Grad-CAM Visualizations
+        # Generate Real CAM Visualizations
         gradcam_available = False
         gradcam_error = None
         heatmap_b64 = None
         overlay_b64 = None
         orig_b64 = to_base64_data_url(pil_image, format="JPEG")
         gradcam_source = None
+        gradcam_method = "CAM"
+        debug_payload = None
 
         if res5b_features is not None:
             try:
-                heatmap_img, overlay_img = compute_resnet18_gradcam(
+                heatmap_img, overlay_img, debug_info = compute_resnet18_gradcam(
                     pil_image,
                     res5b_features,
-                    predicted_class
+                    predicted_class,
+                    confidence=confidence,
                 )
                 heatmap_b64 = to_base64_data_url(heatmap_img, format="JPEG")
                 overlay_b64 = to_base64_data_url(overlay_img, format="JPEG")
                 gradcam_available = True
-                gradcam_source = f"ResNet-18 ({feature_layer_name}) Grad-CAM activation map"
+                gradcam_source = f"ResNet-18 ({feature_layer_name}) Class Activation Map"
+                gradcam_method = "CAM"
+                debug_payload = debug_info
             except Exception as cam_err:
-                logger.error(f"Grad-CAM generation error: {cam_err}", exc_info=True)
+                logger.error(f"CAM generation error: {cam_err}", exc_info=True)
                 gradcam_available = False
-                gradcam_error = "Grad-CAM is unavailable because the explainability pipeline encountered an error."
+                gradcam_error = "Explainability map is unavailable because the explainability pipeline encountered an error."
         else:
             gradcam_available = False
-            gradcam_error = "Grad-CAM is unavailable because the res5b_relu explainability layer could not be extracted from the model."
+            gradcam_error = "Explainability map is unavailable because the res5b_relu explainability layer could not be extracted from the model."
 
         return {
             "predictedClass": predicted_class,
@@ -346,7 +377,9 @@ async def screen_retinal_image(
             "originalImageUrl": orig_b64,
             "gradCAMLayer": feature_layer_name,
             "gradCAMSource": gradcam_source,
+            "gradCAMMethod": gradcam_method,
             "gradCAMError": gradcam_error,
+            "debug": debug_payload,
         }
 
     except ValueError as ve:

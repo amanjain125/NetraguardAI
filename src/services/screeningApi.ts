@@ -28,7 +28,9 @@ export interface BackendScreeningResponse {
   originalImageUrl?: string | null;
   gradCAMLayer?: string | null;
   gradCAMSource?: string | null;
+  gradCAMMethod?: string | null;
   gradCAMError?: string | null;
+  debug?: Record<string, any> | null;
 }
 
 export class ScreeningService {
@@ -140,7 +142,9 @@ export class ScreeningService {
       gradCamAvailable: result.gradCAMAvailable,
       gradCamLayer: result.gradCAMLayer || 'res5b_relu',
       gradCamSource: result.gradCAMSource || undefined,
+      gradCamMethod: result.gradCAMMethod || 'CAM',
       gradCamError: result.gradCAMError || undefined,
+      debug: result.debug || undefined,
       clinicalStatus: 'Pending Review',
     };
   }

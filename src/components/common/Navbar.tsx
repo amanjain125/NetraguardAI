@@ -1,26 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Menu, 
   X, 
   Search, 
   Activity, 
-  User
+  User,
+  LogOut,
+  Stethoscope,
+  ChevronDown
 } from 'lucide-react';
 import { useLanguage } from '../../hooks/useLanguage';
 import { LanguageSelector } from './LanguageSelector';
+import logoImg from '../../assets/logo.jpeg';
+import type { DoctorProfile } from '../../types/auth';
 
 export type PageRoute = 'home' | 'screening' | 'dashboard' | 'history' | 'how-it-works' | 'results';
 
 interface Props {
   currentPage: PageRoute;
   onNavigate: (page: PageRoute) => void;
+  currentDoctor?: DoctorProfile | null;
+  onLogout?: () => void;
 }
 
-export const Navbar: React.FC<Props> = ({ currentPage, onNavigate }) => {
+export const Navbar: React.FC<Props> = ({ currentPage, onNavigate, currentDoctor, onLogout }) => {
   const { t } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [doctorMenuOpen, setDoctorMenuOpen] = useState(false);
+  const doctorMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (doctorMenuRef.current && !doctorMenuRef.current.contains(e.target as Node)) {
+        setDoctorMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const navLinks = [
     { id: 'home' as PageRoute, label: t.nav.home },
@@ -61,18 +80,13 @@ export const Navbar: React.FC<Props> = ({ currentPage, onNavigate }) => {
               NETRA<span className="text-sky-600">GUARD</span>
             </span>
 
-            {/* Circular Retinal Emblem Icon (Compact sizing) */}
-            <div className="relative flex items-center justify-center w-6 h-6 sm:w-6.5 sm:h-6.5 rounded-full bg-gradient-to-tr from-sky-600 via-sky-500 to-cyan-500 shadow-2xs shadow-sky-600/30 text-white transition-transform group-hover:scale-105">
-              <svg className="w-3.5 h-3.5 stroke-white fill-none stroke-[2.2]" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="9" strokeOpacity="0.4" strokeDasharray="3 3" />
-                <path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6Z" />
-                <circle cx="12" cy="12" r="2.5" fill="currentColor" />
-                <path d="M12 9v1.2M12 13.8V15" strokeLinecap="round" />
-              </svg>
+            {/* Official Circular Retinal Emblem with User's Logo */}
+            <div className="relative flex items-center justify-center w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-full overflow-hidden border border-sky-300 shadow-2xs shadow-sky-600/30 text-white transition-transform group-hover:scale-105 bg-white shrink-0">
+              <img src={logoImg} alt="NETRAGUARD Logo" className="w-full h-full object-cover select-none" />
               {/* Subtle pulsing live indicator node */}
-              <span className="absolute -top-0.5 -right-0.5 flex h-1.5 w-1.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-300 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-cyan-400"></span>
+              <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
               </span>
             </div>
 
@@ -134,18 +148,90 @@ export const Navbar: React.FC<Props> = ({ currentPage, onNavigate }) => {
               <LanguageSelector compact />
             </div>
 
-            {/* Profile Button at Far Right Corner */}
-            <button
-              type="button"
-              onClick={() => handleNavClick('dashboard')}
-              title="Doctor Clinical Profile / Workspace"
-              className="relative flex items-center justify-center w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-full bg-white/95 border border-sky-300 text-slate-700 hover:text-sky-700 hover:border-sky-400 hover:bg-white shadow-2xs transition-all active:scale-95"
-              aria-label="Clinician workspace and profile"
-            >
-              <User className="w-3.5 h-3.5" />
-              {/* Online indicator dot */}
-              <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-500 border border-white"></span>
-            </button>
+            {/* Doctor Profile Menu at Far Right Corner */}
+            <div className="relative" ref={doctorMenuRef}>
+              <button
+                type="button"
+                onClick={() => setDoctorMenuOpen(!doctorMenuOpen)}
+                title={currentDoctor ? `${currentDoctor.name} (${currentDoctor.role})` : "Doctor Clinical Profile / Workspace"}
+                className="flex items-center gap-1.5 pl-1.5 pr-2 sm:pr-2.5 py-1 rounded-full bg-white/95 border border-sky-300 text-slate-800 hover:text-sky-700 hover:border-sky-400 shadow-2xs transition-all active:scale-95 cursor-pointer"
+                aria-label="Clinician workspace and profile"
+              >
+                <div className="relative w-6 h-6 rounded-full bg-sky-600 text-white flex items-center justify-center text-[10px] font-bold">
+                  {currentDoctor ? currentDoctor.name.replace('Dr. ', '').charAt(0) : <User className="w-3.5 h-3.5" />}
+                  <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 border border-white"></span>
+                </div>
+                {currentDoctor && (
+                  <span className="text-[11px] font-bold text-slate-800 hidden md:inline-block max-w-[100px] truncate">
+                    {currentDoctor.name.split(' ')[0]} {currentDoctor.name.split(' ')[1] || ''}
+                  </span>
+                )}
+                <ChevronDown className="w-3 h-3 text-slate-400" />
+              </button>
+
+              {/* Doctor Profile Dropdown */}
+              {doctorMenuOpen && (
+                <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-white border border-slate-200/90 shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="px-4 py-3 border-b border-slate-100">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-sky-100 text-sky-800 border border-sky-200 font-bold">
+                        VERIFIED CLINICIAN
+                      </span>
+                    </div>
+                    <div className="text-xs font-bold text-slate-900 truncate">
+                      {currentDoctor?.name || 'Dr. Kalyani Sharma'}
+                    </div>
+                    <div className="text-[11px] text-sky-700 font-medium truncate">
+                      {currentDoctor?.role || 'Chief Ophthalmologist'}
+                    </div>
+                    <div className="text-[10px] text-slate-500 truncate mt-0.5">
+                      {currentDoctor?.hospital || 'AIIMS Apex Eye Centre'}
+                    </div>
+                  </div>
+
+                  <div className="py-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onNavigate('dashboard');
+                        setDoctorMenuOpen(false);
+                      }}
+                      className="w-full px-4 py-2 text-left text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                    >
+                      <Stethoscope className="w-3.5 h-3.5 text-sky-600" />
+                      <span>Doctor Review Dashboard</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onNavigate('screening');
+                        setDoctorMenuOpen(false);
+                      }}
+                      className="w-full px-4 py-2 text-left text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                    >
+                      <Activity className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Start Retinal Screening</span>
+                    </button>
+                  </div>
+
+                  {onLogout && (
+                    <div className="border-t border-slate-100 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDoctorMenuOpen(false);
+                          onLogout();
+                        }}
+                        className="w-full px-4 py-2 text-left text-xs text-rose-600 hover:bg-rose-50 flex items-center gap-2 font-medium cursor-pointer"
+                      >
+                        <LogOut className="w-3.5 h-3.5 text-rose-600" />
+                        <span>Log Out / Switch Account</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Mobile Hamburger Toggle */}
             <button
