@@ -3,7 +3,6 @@ import {
   Stethoscope, 
   Lock, 
   Mail, 
-  Building2, 
   ArrowRight, 
   ShieldCheck, 
   Sparkles, 
@@ -11,8 +10,9 @@ import {
   EyeOff, 
   UserCheck,
   User,
-  BadgeCheck,
-  CheckCircle2
+  CheckCircle2,
+  X,
+  UserPlus
 } from 'lucide-react';
 import logoImg from '../assets/logo.jpeg';
 import type { DoctorProfile } from '../types/auth';
@@ -27,17 +27,14 @@ export const DoctorLoginPage: React.FC<Props> = ({ onLoginSuccess, onReplaySplas
   // Mode: 'signin' | 'signup'
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
 
-  // Sign In state
+  // Sign In state (Minimal: Email + Password)
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [department, setDepartment] = useState('Vitreoretinal & Diabetic Retinopathy Clinic');
 
-  // Sign Up (Create Account) state
+  // Sign Up (Create Account) state: ONLY 5 fields (Name, Specialist, Email, Password, Confirm Password)
   const [fullName, setFullName] = useState('');
-  const [regNumber, setRegNumber] = useState('');
+  const [specialist, setSpecialist] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
-  const [hospital, setHospital] = useState('');
-  const [specialty, setSpecialty] = useState('Ophthalmology & Retinal Imaging');
   const [signupPassword, setSignupPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
@@ -45,9 +42,15 @@ export const DoctorLoginPage: React.FC<Props> = ({ onLoginSuccess, onReplaySplas
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Google Account Chooser Modal state
+  const [showGoogleModal, setShowGoogleModal] = useState(false);
+  const [googleCustomEmail, setGoogleCustomEmail] = useState('');
+  const [googleCustomName, setGoogleCustomName] = useState('');
+  const [showCustomGoogleInput, setShowCustomGoogleInput] = useState(false);
+  const [googleSigningIn, setGoogleSigningIn] = useState(false);
 
   // 1. Handle Sign In
   const handleSignIn = (e: React.FormEvent) => {
@@ -56,7 +59,7 @@ export const DoctorLoginPage: React.FC<Props> = ({ onLoginSuccess, onReplaySplas
     setSuccessMsg('');
 
     if (!email.trim() || !password.trim()) {
-      setErrorMsg('Please enter both Doctor Email/ID and Password.');
+      setErrorMsg('Please enter both Doctor Email and Password.');
       return;
     }
 
@@ -75,10 +78,10 @@ export const DoctorLoginPage: React.FC<Props> = ({ onLoginSuccess, onReplaySplas
           ? `Dr. ${email.split('@')[0].replace('.', ' ').replace(/^dr\s*/i, '').replace(/\b\w/g, (c) => c.toUpperCase())}`
           : `Dr. ${email}`,
         email: email.trim(),
-        role: 'Consultant Ophthalmologist',
-        specialty: department,
+        role: 'Verified Clinician',
+        specialty: 'Ophthalmologist & Retinal Specialist',
         hospital: 'Primary Health Network & Retinopathy Clinic',
-        registrationNumber: 'MCI-REG-VALID',
+        registrationNumber: 'MED-VALID-2026',
       };
 
       saveRegisteredDoctor(doctorProfile);
@@ -86,22 +89,32 @@ export const DoctorLoginPage: React.FC<Props> = ({ onLoginSuccess, onReplaySplas
     }, 500);
   };
 
-  // 2. Handle Create Account
+  // 2. Handle Create Account (5 fields only)
   const handleSignUp = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
 
-    if (!fullName.trim() || !signupEmail.trim() || !signupPassword.trim()) {
-      setErrorMsg('Please fill in all required fields.');
+    if (!fullName.trim()) {
+      setErrorMsg('Please enter Doctor Name.');
       return;
     }
-
+    if (!signupEmail.trim()) {
+      setErrorMsg('Please enter Email Address.');
+      return;
+    }
+    if (!specialist.trim()) {
+      setErrorMsg('Please enter Specialist / Specialty.');
+      return;
+    }
+    if (!signupPassword.trim()) {
+      setErrorMsg('Please enter a Password.');
+      return;
+    }
     if (signupPassword !== confirmPassword) {
       setErrorMsg('Passwords do not match. Please verify your password.');
       return;
     }
-
     if (signupPassword.length < 6) {
       setErrorMsg('Password should be at least 6 characters.');
       return;
@@ -117,42 +130,51 @@ export const DoctorLoginPage: React.FC<Props> = ({ onLoginSuccess, onReplaySplas
         id: `DOC-${Math.floor(1000 + Math.random() * 9000)}`,
         name: formattedName,
         email: signupEmail.trim(),
-        role: 'Verified Ophthalmologist',
-        specialty: specialty || 'Diabetic Retinopathy Screening',
-        hospital: hospital.trim() || 'Apex Eye Institute & Tele-Screening Unit',
-        registrationNumber: regNumber.trim() || `REG-${Date.now().toString().slice(-5)}`,
+        role: specialist.trim() || 'Ophthalmologist',
+        specialty: specialist.trim() || 'Diabetic Retinopathy Screening',
+        hospital: 'Apex Eye Hospital & Clinical Network',
+        registrationNumber: `REG-${Date.now().toString().slice(-5)}`,
       };
 
       saveRegisteredDoctor(newDoctor);
-      setSuccessMsg('Account created successfully! Logging in...');
+      setSuccessMsg('Account created successfully! Entering portal...');
       
       setTimeout(() => {
         onLoginSuccess(newDoctor);
-      }, 400);
-    }, 600);
+      }, 350);
+    }, 500);
   };
 
-  // 3. Handle Sign In with Google
-  const handleGoogleSignIn = () => {
-    setErrorMsg('');
-    setGoogleLoading(true);
+  // 3. Handle Choosing a Google Account
+  const handleSelectGoogleAccount = (chosenName: string, chosenEmail: string) => {
+    setGoogleSigningIn(true);
 
     setTimeout(() => {
-      setGoogleLoading(false);
-      // Create authenticated Google doctor profile
+      setGoogleSigningIn(false);
+      setShowGoogleModal(false);
+
+      const formattedName = chosenName.startsWith('Dr.') ? chosenName : `Dr. ${chosenName}`;
+
       const googleDoctor: DoctorProfile = {
-        id: 'DOC-GGL-8821',
-        name: 'Dr. Physician (Google Clinician)',
-        email: 'doctor.clinician@gmail.com',
-        role: 'Ophthalmic Consultant',
-        specialty: 'Retinal Disease Diagnostic & AI Screening',
-        hospital: 'Google Health Verified Medical Center',
-        registrationNumber: 'GGL-MED-2026',
+        id: `DOC-GGL-${Date.now().toString().slice(-4)}`,
+        name: formattedName,
+        email: chosenEmail,
+        role: 'Verified Google Clinician',
+        specialty: 'Ophthalmic Consultant & Retinal Specialist',
+        hospital: 'Google Health Verified Healthcare Network',
+        registrationNumber: 'GGL-OAUTH-2026',
       };
 
       saveRegisteredDoctor(googleDoctor);
       onLoginSuccess(googleDoctor);
     }, 600);
+  };
+
+  const handleCustomGoogleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!googleCustomEmail.trim()) return;
+    const derivedName = googleCustomName.trim() || googleCustomEmail.split('@')[0].replace('.', ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    handleSelectGoogleAccount(derivedName, googleCustomEmail.trim());
   };
 
   return (
@@ -249,36 +271,31 @@ export const DoctorLoginPage: React.FC<Props> = ({ onLoginSuccess, onReplaySplas
             </div>
           )}
 
-          {/* Sign In with Google Button */}
+          {/* Sign In with Google Button (Triggers authentic Google Account Chooser) */}
           <div>
             <button
               type="button"
-              onClick={handleGoogleSignIn}
-              disabled={googleLoading}
-              className="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 hover:text-slate-900 font-semibold text-xs shadow-2xs transition-all cursor-pointer disabled:opacity-60 active:scale-[0.99]"
+              onClick={() => setShowGoogleModal(true)}
+              className="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 hover:text-slate-900 font-semibold text-xs shadow-2xs transition-all cursor-pointer active:scale-[0.99]"
             >
-              {googleLoading ? (
-                <div className="w-4 h-4 border-2 border-slate-300 border-t-sky-600 rounded-full animate-spin"></div>
-              ) : (
-                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                  <path
-                    fill="#4285F4"
-                    d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24Z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.04 0 12s.45 3.82 1.25 5.42l4.03-3.15Z"
-                  />
-                  <path
-                    fill="#EA4335"
-                    d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98Z"
-                  />
-                </svg>
-              )}
+              <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                <path
+                  fill="#4285F4"
+                  d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24Z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.04 0 12s.45 3.82 1.25 5.42l4.03-3.15Z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98Z"
+                />
+              </svg>
               <span>Continue with Google</span>
             </button>
 
@@ -288,20 +305,20 @@ export const DoctorLoginPage: React.FC<Props> = ({ onLoginSuccess, onReplaySplas
               </div>
               <div className="relative flex justify-center text-[11px] uppercase tracking-wider">
                 <span className="bg-white px-3 text-slate-400 font-semibold font-mono">
-                  or sign in with credentials
+                  or continue with credentials
                 </span>
               </div>
             </div>
           </div>
 
           {/* ========================================================================= */}
-          {/* TAB 1: SIGN IN FORM                                                      */}
+          {/* TAB 1: SIGN IN FORM (Clean: Email + Password)                             */}
           {/* ========================================================================= */}
           {authMode === 'signin' && (
             <form onSubmit={handleSignIn} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Doctor ID / Hospital Email
+                  Doctor Email Address
                 </label>
                 <div className="relative">
                   <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -310,7 +327,7 @@ export const DoctorLoginPage: React.FC<Props> = ({ onLoginSuccess, onReplaySplas
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="e.g. doctor@hospital.org"
+                    placeholder="doctor@hospital.org"
                     className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-xs placeholder-slate-400 focus:bg-white focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all"
                   />
                 </div>
@@ -345,25 +362,6 @@ export const DoctorLoginPage: React.FC<Props> = ({ onLoginSuccess, onReplaySplas
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Clinical Department / Screening Unit
-                </label>
-                <div className="relative">
-                  <Building2 className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <select
-                    value={department}
-                    onChange={(e) => setDepartment(e.target.value)}
-                    className="w-full pl-10 pr-8 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-xs focus:bg-white focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all cursor-pointer"
-                  >
-                    <option value="Vitreoretinal & Diabetic Retinopathy Clinic">Vitreoretinal &amp; Diabetic Retinopathy Clinic</option>
-                    <option value="Ophthalmology Outpatient Department (OPD)">Ophthalmology Outpatient Department (OPD)</option>
-                    <option value="Rural Health Tele-Screening Unit">Rural Health Tele-Screening Unit</option>
-                    <option value="Comprehensive Eye Care & Surgery">Comprehensive Eye Care &amp; Surgery</option>
-                  </select>
-                </div>
-              </div>
-
               <div className="flex items-center justify-between pt-0.5">
                 <label className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer select-none">
                   <input
@@ -372,7 +370,7 @@ export const DoctorLoginPage: React.FC<Props> = ({ onLoginSuccess, onReplaySplas
                     onChange={(e) => setRememberMe(e.target.checked)}
                     className="w-3.5 h-3.5 rounded border-slate-300 text-sky-600 focus:ring-sky-500/20"
                   />
-                  <span>Remember this clinical workstation</span>
+                  <span>Remember this workstation</span>
                 </label>
               </div>
 
@@ -398,13 +396,14 @@ export const DoctorLoginPage: React.FC<Props> = ({ onLoginSuccess, onReplaySplas
           )}
 
           {/* ========================================================================= */}
-          {/* TAB 2: CREATE ACCOUNT (SIGN UP) FORM                                     */}
+          {/* TAB 2: CREATE ACCOUNT (ONLY 5 ESSENTIAL FIELDS)                           */}
           {/* ========================================================================= */}
           {authMode === 'signup' && (
             <form onSubmit={handleSignUp} className="space-y-3.5">
+              {/* Field 1: Doctor Name */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Doctor Full Name <span className="text-rose-500">*</span>
+                  Name of the Doctor <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -414,45 +413,12 @@ export const DoctorLoginPage: React.FC<Props> = ({ onLoginSuccess, onReplaySplas
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="e.g. Dr. Kalyani Sharma"
-                    className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-xs placeholder-slate-400 focus:bg-white focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-xs placeholder-slate-400 focus:bg-white focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Medical Reg. / License No.
-                  </label>
-                  <div className="relative">
-                    <BadgeCheck className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      value={regNumber}
-                      onChange={(e) => setRegNumber(e.target.value)}
-                      placeholder="e.g. KMC-89421"
-                      className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-xs placeholder-slate-400 focus:bg-white focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Hospital / Clinic Name
-                  </label>
-                  <div className="relative">
-                    <Building2 className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      value={hospital}
-                      onChange={(e) => setHospital(e.target.value)}
-                      placeholder="e.g. City Eye Hospital"
-                      className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-xs placeholder-slate-400 focus:bg-white focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all"
-                    />
-                  </div>
-                </div>
-              </div>
-
+              {/* Field 2: Email Address */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Email Address <span className="text-rose-500">*</span>
@@ -465,51 +431,63 @@ export const DoctorLoginPage: React.FC<Props> = ({ onLoginSuccess, onReplaySplas
                     value={signupEmail}
                     onChange={(e) => setSignupEmail(e.target.value)}
                     placeholder="doctor@hospital.org"
-                    className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-xs placeholder-slate-400 focus:bg-white focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-xs placeholder-slate-400 focus:bg-white focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all"
                   />
                 </div>
               </div>
 
+              {/* Field 3: Specialist */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Department / Specialty
+                  Specialist / Specialty <span className="text-rose-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  value={specialty}
-                  onChange={(e) => setSpecialty(e.target.value)}
-                  placeholder="e.g. Vitreoretinal Specialist"
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-xs placeholder-slate-400 focus:bg-white focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all"
-                />
+                <div className="relative">
+                  <Stethoscope className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    required
+                    value={specialist}
+                    onChange={(e) => setSpecialist(e.target.value)}
+                    placeholder="e.g. Ophthalmologist / Retina Specialist"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-xs placeholder-slate-400 focus:bg-white focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all"
+                  />
+                </div>
               </div>
 
+              {/* Field 4 & 5: Password & Confirm Password */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Password <span className="text-rose-500">*</span>
                   </label>
-                  <input
-                    type="password"
-                    required
-                    value={signupPassword}
-                    onChange={(e) => setSignupPassword(e.target.value)}
-                    placeholder="At least 6 chars"
-                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-xs placeholder-slate-400 focus:bg-white focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all"
-                  />
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="password"
+                      required
+                      value={signupPassword}
+                      onChange={(e) => setSignupPassword(e.target.value)}
+                      placeholder="At least 6 chars"
+                      className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-xs placeholder-slate-400 focus:bg-white focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all"
+                    />
+                  </div>
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Confirm Password <span className="text-rose-500">*</span>
                   </label>
-                  <input
-                    type="password"
-                    required
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Re-enter password"
-                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-xs placeholder-slate-400 focus:bg-white focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all"
-                  />
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="password"
+                      required
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Re-enter password"
+                      className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-xs placeholder-slate-400 focus:bg-white focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -521,7 +499,7 @@ export const DoctorLoginPage: React.FC<Props> = ({ onLoginSuccess, onReplaySplas
                 {isLoading ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                    <span>Creating Clinician Account...</span>
+                    <span>Creating Doctor Account...</span>
                   </>
                 ) : (
                   <>
@@ -538,7 +516,7 @@ export const DoctorLoginPage: React.FC<Props> = ({ onLoginSuccess, onReplaySplas
           <div className="pt-2 text-center text-xs text-slate-500">
             {authMode === 'signin' ? (
               <span>
-                Don't have a clinician account?{' '}
+                Don't have an account?{' '}
                 <button
                   type="button"
                   onClick={() => {
@@ -584,6 +562,159 @@ export const DoctorLoginPage: React.FC<Props> = ({ onLoginSuccess, onReplaySplas
 
         </div>
       </div>
+
+      {/* ========================================================================= */}
+      {/* GOOGLE ACCOUNT CHOOSER MODAL (Authentic Google Sign-In Dialog)             */}
+      {/* ========================================================================= */}
+      {showGoogleModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-sm w-full p-6 space-y-5 animate-in zoom-in-95 duration-200 relative">
+            
+            {/* Modal Header */}
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <svg className="w-6 h-6 shrink-0" viewBox="0 0 24 24">
+                  <path
+                    fill="#4285F4"
+                    d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24Z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.04 0 12s.45 3.82 1.25 5.42l4.03-3.15Z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98Z"
+                  />
+                </svg>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 leading-tight">
+                    Choose an account
+                  </h3>
+                  <p className="text-xs text-slate-500">to continue to NetraGuard AI</p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowGoogleModal(false);
+                  setShowCustomGoogleInput(false);
+                }}
+                className="p-1 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {googleSigningIn ? (
+              <div className="py-8 flex flex-col items-center justify-center space-y-3">
+                <div className="w-8 h-8 border-3 border-sky-200 border-t-sky-600 rounded-full animate-spin"></div>
+                <p className="text-xs font-semibold text-slate-700">Connecting Google Account...</p>
+              </div>
+            ) : (
+              <div className="space-y-1 border-t border-b border-slate-100 py-2">
+                {/* Account 1 */}
+                <button
+                  type="button"
+                  onClick={() => handleSelectGoogleAccount('Dr. Kalyani Sharma', 'kalyani4156@gmail.com')}
+                  className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 text-left transition-colors cursor-pointer group"
+                >
+                  <div className="w-9 h-9 rounded-full bg-purple-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
+                    K
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-bold text-slate-900 group-hover:text-sky-600 truncate">
+                      Kalyani Sharma
+                    </div>
+                    <div className="text-[11px] text-slate-500 truncate">
+                      kalyani4156@gmail.com
+                    </div>
+                  </div>
+                </button>
+
+                {/* Account 2 */}
+                <button
+                  type="button"
+                  onClick={() => handleSelectGoogleAccount('Dr. Aman Jain', 'amanjain125@gmail.com')}
+                  className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 text-left transition-colors cursor-pointer group"
+                >
+                  <div className="w-9 h-9 rounded-full bg-teal-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
+                    A
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-bold text-slate-900 group-hover:text-sky-600 truncate">
+                      Aman Jain
+                    </div>
+                    <div className="text-[11px] text-slate-500 truncate">
+                      amanjain125@gmail.com
+                    </div>
+                  </div>
+                </button>
+
+                {/* Account Option 3: Use Another Account */}
+                {!showCustomGoogleInput ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowCustomGoogleInput(true)}
+                    className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 text-left transition-colors cursor-pointer text-slate-700"
+                  >
+                    <div className="w-9 h-9 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center">
+                      <UserPlus className="w-4 h-4" />
+                    </div>
+                    <span className="text-xs font-semibold text-slate-700">
+                      Use another account
+                    </span>
+                  </button>
+                ) : (
+                  <form onSubmit={handleCustomGoogleSubmit} className="pt-2 space-y-2.5">
+                    <input
+                      type="email"
+                      required
+                      autoFocus
+                      value={googleCustomEmail}
+                      onChange={(e) => setGoogleCustomEmail(e.target.value)}
+                      placeholder="Enter your Gmail address"
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+                    />
+                    <input
+                      type="text"
+                      value={googleCustomName}
+                      onChange={(e) => setGoogleCustomName(e.target.value)}
+                      placeholder="Your Full Name (optional)"
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+                    />
+                    <div className="flex justify-end gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setShowCustomGoogleInput(false)}
+                        className="px-3 py-1.5 text-xs text-slate-500 hover:text-slate-700"
+                      >
+                        Back
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-sky-600 text-white hover:bg-sky-500"
+                      >
+                        Continue
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            )}
+
+            {/* Google privacy footnote */}
+            <p className="text-[10px] text-slate-400 leading-normal text-center">
+              To continue, Google will share your name, email address, language preference, and profile picture with NetraGuard AI.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
