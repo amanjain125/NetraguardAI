@@ -15,6 +15,13 @@ from onnx import numpy_helper
 import onnxruntime as ort
 import matplotlib
 
+# Import SQLite database module
+try:
+    from backend import database
+except ImportError:
+    import database
+
+
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("netraguard-backend")
@@ -107,14 +114,43 @@ app.add_middleware(
 )
 
 
+# Initialize SQLite Database on startup
+@app.on_event("startup")
+def on_startup():
+    try:
+        database.init_db()
+        logger.info("SQLite Database initialized on FastAPI startup.")
+    except Exception as e:
+        logger.error(f"Failed to initialize SQLite database: {e}")
+
+
 class HealthResponse(BaseModel):
     status: str
     model: str
     featureLayer: str
     matlabArtifactsAvailable: bool
+    databaseConnected: bool = True
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+    fullName: str
+    licenseNumber: Optional[str] = ""
+    hospital: Optional[str] = ""
+
+
+class UpdateNotesRequest(BaseModel):
+    notes: str
 
 
 class ScreeningResponse(BaseModel):
+    id: Optional[int] = None
     predictedClass: int
     predictedClassName: str
     confidence: float
@@ -364,7 +400,57 @@ async def screen_retinal_image(
             gradcam_available = False
             gradcam_error = "Explainability map is unavailable because the res5b_relu explainability layer could not be extracted from the model."
 
+        # --- SQLite Database Storage ---
+        # 1. Save uploaded image metadata
+        upload_id = None
+        try:
+            filename = upload.filename or "fundus_scan.jpg"
+            saved_filename = f"{os.urandom(8).hex()}_{filename}"
+            saved_filepath = database.UPLOADS_DIR / saved_filename
+            with open(saved_filepath, "wb") as f:
+                f.write(contents)
+            upload_id = database.save_upload_record(
+                filename=filename,
+                file_path=str(saved_filepath),
+                file_size=len(contents)
+            )
+        except Exception as db_err:
+            logger.warning(f"Could not save upload record to SQLite: {db_err}")
+
+        # 2. Save screening result report to SQLite
+        report_record = None
+        try:
+            import uuid
+            patient_id = f"PAT-{uuid.uuid4().hex[:6].upper()}"
+            report_record = database.save_screening_report(
+                patient_id=patient_id,
+                patient_name="Screened Patient",
+                patient_age=55,
+                doctor_id=1,  # default doctor ID
+                upload_id=upload_id,
+                image_url=orig_b64,
+                predicted_class=predicted_class,
+                predicted_class_name=predicted_class_name,
+                confidence=round(confidence, 4),
+                screening_status=screening_status,
+                referral_message=referral_message,
+                gradcam_heatmap=heatmap_b64,
+                gradcam_overlay=overlay_b64,
+                report_json={
+                    "predictedClass": predicted_class,
+                    "predictedClassName": predicted_class_name,
+                    "confidence": round(confidence, 4),
+                    "screeningStatus": screening_status,
+                    "referralMessage": referral_message,
+                }
+            )
+        except Exception as db_err:
+            logger.warning(f"Could not save screening report to SQLite: {db_err}")
+
+        report_id = report_record.get("id") if report_record else None
+
         return {
+            "id": report_id,
             "predictedClass": predicted_class,
             "predictedClassName": predicted_class_name,
             "confidence": round(confidence, 4),
@@ -395,7 +481,77 @@ async def screen_retinal_image(
         )
 
 
+# --- SQLite Authentication Endpoints ---
+
+@app.post("/api/auth/register")
+def register_doctor(req: RegisterRequest):
+    """Register a new doctor account in SQLite DB."""
+    try:
+        user = database.register_user(
+            email=req.email,
+            password=req.password,
+            full_name=req.fullName,
+            license_number=req.licenseNumber or "",
+            hospital=req.hospital or "",
+        )
+        return {"status": "success", "user": user}
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        logger.error(f"Error registering user: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Registration failed.")
+
+
+@app.post("/api/auth/login")
+def login_doctor(req: LoginRequest):
+    """Authenticate doctor credentials using SQLite DB."""
+    user = database.authenticate_user(req.email, req.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email address or password."
+        )
+    return {"status": "success", "user": user}
+
+
+# --- SQLite Reports Management Endpoints ---
+
+@app.get("/api/reports")
+def list_reports(limit: int = 50):
+    """Retrieve all saved screening reports from SQLite DB."""
+    reports = database.get_all_reports(limit=limit)
+    return {"reports": reports, "count": len(reports)}
+
+
+@app.get("/api/reports/{report_id}")
+def get_report(report_id: int):
+    """Retrieve a single screening report by ID from SQLite DB."""
+    report = database.get_report_by_id(report_id)
+    if not report:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report not found.")
+    return report
+
+
+@app.post("/api/reports/{report_id}/notes")
+def update_report_notes(report_id: int, req: UpdateNotesRequest):
+    """Update doctor notes for a screening report in SQLite DB."""
+    success = database.update_report_notes(report_id, req.notes)
+    if not success:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report not found.")
+    return {"status": "success", "message": "Doctor notes updated successfully."}
+
+
+@app.delete("/api/reports/{report_id}")
+def delete_report(report_id: int):
+    """Delete a screening report from SQLite DB."""
+    success = database.delete_report(report_id)
+    if not success:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report not found.")
+    return {"status": "success", "message": "Report deleted successfully."}
+
+
 if __name__ == "__main__":
     import uvicorn
     app_module = "main:app" if Path("main.py").exists() else "backend.main:app"
     uvicorn.run(app_module, host="127.0.0.1", port=8000, reload=True)
+

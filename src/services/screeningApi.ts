@@ -150,10 +150,102 @@ export class ScreeningService {
   }
 
   /**
-   * Fetches previous screening history records from the backend database.
+   * Doctor Login against SQLite database backend.
+   */
+  public async loginDoctor(email: string, password: string): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (!response.ok) {
+      let errorDetail = 'Invalid login credentials.';
+      try {
+        const json = await response.json();
+        if (json.detail) errorDetail = json.detail;
+      } catch {}
+      throw new Error(errorDetail);
+    }
+    return await response.json();
+  }
+
+  /**
+   * Doctor Account Registration in SQLite database backend.
+   */
+  public async registerDoctor(data: {
+    email: string;
+    password: string;
+    fullName: string;
+    licenseNumber?: string;
+    hospital?: string;
+  }): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      let errorDetail = 'Registration failed.';
+      try {
+        const json = await response.json();
+        if (json.detail) errorDetail = json.detail;
+      } catch {}
+      throw new Error(errorDetail);
+    }
+    return await response.json();
+  }
+
+  /**
+   * Fetches previous screening history records from the SQLite backend database.
    */
   public async getScreeningHistory(): Promise<ScreeningResult[]> {
-    return Promise.resolve(DEMO_SCREENING_RECORDS);
+    try {
+      const response = await fetch(`${API_BASE_URL}/reports`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.reports && Array.isArray(data.reports) && data.reports.length > 0) {
+          const severityMap: Record<number, DRSeverityLabel> = {
+            0: 'No Apparent DR',
+            1: 'Mild Non-Proliferative DR',
+            2: 'Moderate Non-Proliferative DR',
+            3: 'Severe Non-Proliferative DR',
+            4: 'Proliferative DR',
+          };
+          return data.reports.map((r: any) => ({
+            id: `REP-${r.id}`,
+            patientId: r.patient_id || `PT-${r.id}`,
+            centerLocation: r.hospital || 'St. Jude Eye Care Center',
+            timestamp: r.created_at || new Date().toISOString(),
+            prediction: severityMap[r.predicted_class] || (r.predicted_class_name as DRSeverityLabel),
+            class: r.predicted_class as DiabeticRetinopathyGrade,
+            confidence: r.confidence,
+            referable: r.predicted_class >= 2,
+            macularInvolvementSuspected: r.predicted_class >= 3,
+            recommendation: r.referral_message,
+            imageQuality: {
+              status: 'Adequate',
+              focusScore: 0.95,
+              illuminationScore: 0.92,
+              fieldCoverageScore: 0.96,
+              artifactsDetected: false,
+            },
+            originalImageUrl: r.image_url,
+            gradCamImageUrl: r.gradcam_overlay,
+            gradCamHeatmapUrl: r.gradcam_heatmap,
+            gradCamOverlayUrl: r.gradcam_overlay,
+            gradCamAvailable: Boolean(r.gradcam_overlay),
+            doctorNotes: r.doctor_notes || undefined,
+            reviewedBy: r.doctor_name || undefined,
+            clinicalStatus: r.doctor_notes ? 'Reviewed' : 'Pending Review',
+          }));
+        }
+      }
+    } catch {
+      // Fallback to demo records if backend API is offline
+    }
+    return DEMO_SCREENING_RECORDS;
   }
 
   /**
@@ -165,7 +257,7 @@ export class ScreeningService {
   }
 
   /**
-   * Clinical action: Updates doctor review and clinical recommendation.
+   * Clinical action: Updates doctor review and clinical recommendation in SQLite.
    */
   public async updateDoctorReview(
     id: string,
@@ -173,21 +265,42 @@ export class ScreeningService {
     status: ClinicalReviewStatus,
     doctorName: string
   ): Promise<ScreeningResult> {
-    const record = await this.getScreeningById(id);
-    if (!record) {
-      throw new Error(`Screening record ${id} not found.`);
+    const rawId = id.replace('REP-', '');
+    if (!isNaN(Number(rawId))) {
+      try {
+        await fetch(`${API_BASE_URL}/reports/${rawId}/notes`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notes }),
+        });
+      } catch {}
     }
 
+    const record = await this.getScreeningById(id);
     const updated: ScreeningResult = {
-      ...record,
+      ...(record || {
+        id,
+        patientId: 'PT-1001',
+        centerLocation: 'Primary Health Center',
+        timestamp: new Date().toISOString(),
+        prediction: 'No Apparent DR',
+        class: 0,
+        confidence: 0.95,
+        referable: false,
+        macularInvolvementSuspected: false,
+        recommendation: 'Routine follow-up',
+        imageQuality: { status: 'Adequate', focusScore: 0.9, illuminationScore: 0.9, fieldCoverageScore: 0.9, artifactsDetected: false },
+        originalImageUrl: '',
+      }),
       doctorNotes: notes,
       clinicalStatus: status,
       reviewedBy: doctorName,
       reviewTimestamp: new Date().toISOString(),
     };
 
-    return Promise.resolve(updated);
+    return updated;
   }
 }
 
 export const screeningApi = ScreeningService.getInstance();
+
