@@ -203,8 +203,8 @@ export const ScreeningPage: React.FC<Props> = ({ onNavigate, onSetSelectedResult
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">
-      {/* Page Header */}
-      <div className="text-left space-y-2">
+      {/* Page Header (Hidden in Print) */}
+      <div className="no-print text-left space-y-2">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-50 text-sky-700 text-xs font-semibold uppercase tracking-wider">
           <Sparkles className="w-3.5 h-3.5" />
           <span>Patient Intake & Diagnostic Portal</span>
@@ -217,8 +217,8 @@ export const ScreeningPage: React.FC<Props> = ({ onNavigate, onSetSelectedResult
         </p>
       </div>
 
-      {/* Main Intake Section: Uploader & Protocol Sidebar */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      {/* Main Intake Section: Uploader & Protocol Sidebar (Hidden in Print) */}
+      <div className="no-print grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Column: Image Uploader */}
         <div className="lg:col-span-8 space-y-6">
           <ImageUploader
@@ -405,8 +405,8 @@ export const ScreeningPage: React.FC<Props> = ({ onNavigate, onSetSelectedResult
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex items-center gap-3 shrink-0 flex-wrap">
+              {/* Action Buttons (Hidden in Print) */}
+              <div className="no-print flex items-center gap-3 shrink-0 flex-wrap">
                 <button
                   type="button"
                   onClick={handlePrintReport}

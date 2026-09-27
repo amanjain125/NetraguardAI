@@ -22,7 +22,7 @@ export const PatientFriendlyReport: React.FC<Props> = ({ result, onPrint }) => {
   const isReferable = result.referable;
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden max-w-4xl mx-auto">
+    <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden max-w-4xl mx-auto print:border-none print:shadow-none print:max-w-full print:rounded-none">
       {/* Patient Header Banner */}
       <div className="bg-gradient-to-r from-sky-700 via-sky-800 to-slate-900 text-white p-6 sm:p-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/10">
@@ -39,12 +39,18 @@ export const PatientFriendlyReport: React.FC<Props> = ({ result, onPrint }) => {
             </p>
           </div>
 
-          {/* Right Action: Language Switcher for Patient Guidance */}
-          <div className="flex flex-col items-start sm:items-end gap-2 bg-white/10 p-3 rounded-2xl backdrop-blur-xs">
+          {/* Right Action: Language Switcher for Patient Guidance (Hidden in Print) */}
+          <div className="no-print flex flex-col items-start sm:items-end gap-2 bg-white/10 p-3 rounded-2xl backdrop-blur-xs">
             <span className="text-[11px] text-sky-200 font-medium">
               {t.patientReport.selectLanguage}
             </span>
             <LanguageSelector />
+          </div>
+
+          {/* Print-only Language & Platform Badge */}
+          <div className="hidden print:block text-right text-xs text-sky-200 font-mono">
+            <div className="font-bold text-white tracking-wider">NETRAGUARD AI CLINICAL PLATFORM</div>
+            <div>PATIENT EYE HEALTH REPORT · {language.toUpperCase()}</div>
           </div>
         </div>
 
@@ -172,7 +178,7 @@ export const PatientFriendlyReport: React.FC<Props> = ({ result, onPrint }) => {
           <button
             type="button"
             onClick={() => (onPrint ? onPrint() : window.print())}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-medium shadow-xs transition-colors"
+            className="no-print inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-medium shadow-xs transition-colors"
           >
             <Printer className="w-4 h-4" />
             <span>{t.patientReport.printCard}</span>

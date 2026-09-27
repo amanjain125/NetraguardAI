@@ -39,3 +39,85 @@
 .animate-pulse-subtle {
   animation: pulse-subtle 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
+
+/* ========================================================================= */
+/* Medical Report Print & PDF Export Styles                                   */
+/* ========================================================================= */
+@page {
+  size: A4 portrait;
+  margin: 10mm 12mm 12mm 12mm;
+}
+
+@media print {
+  /* Force all modern browsers to keep colors, backgrounds, and gradients */
+  *,
+  *::before,
+  *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 11pt !important;
+    width: 100% !important;
+  }
+
+  /* Completely eliminate sticky headers, navbar, footers, buttons, and no-print UI */
+  header,
+  nav,
+  footer,
+  .no-print,
+  button,
+  input,
+  select,
+  [data-no-print="true"] {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Reset position of all containers to static so nothing floats across pages */
+  header, nav, .sticky, [class*="sticky"] {
+    position: static !important;
+    display: none !important;
+  }
+
+  /* Make report container fill the entire page cleanly without margins */
+  main,
+  #root,
+  .max-w-4xl,
+  .max-w-6xl,
+  .max-w-7xl {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+
+  /* Prevent awkward page breaks inside cards */
+  .rounded-2xl,
+  .rounded-3xl,
+  .border,
+  .grid > div {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Ensure text is dark and legible on printed paper */
+  .text-white {
+    color: #ffffff !important;
+  }
+
+  /* Remove dropshadows to prevent muddy prints */
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+}

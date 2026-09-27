@@ -18,15 +18,19 @@ export const MainLayout: React.FC<Props> = ({ children, currentPage, onNavigate,
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans selection:bg-sky-100 selection:text-sky-900">
       {/* Top Clinical Safety Banner */}
-      <MedicalDisclaimer variant="banner" />
+      <div className="no-print">
+        <MedicalDisclaimer variant="banner" />
+      </div>
 
       {/* Main Navbar with Doctor session */}
-      <Navbar
-        currentPage={currentPage}
-        onNavigate={onNavigate}
-        currentDoctor={currentDoctor}
-        onLogout={onLogout}
-      />
+      <div className="no-print">
+        <Navbar
+          currentPage={currentPage}
+          onNavigate={onNavigate}
+          currentDoctor={currentDoctor}
+          onLogout={onLogout}
+        />
+      </div>
 
       {/* Main Content Area */}
       <main className="flex-1 w-full animate-in fade-in duration-150">
@@ -34,7 +38,9 @@ export const MainLayout: React.FC<Props> = ({ children, currentPage, onNavigate,
       </main>
 
       {/* Footer */}
-      <Footer onNavigate={onNavigate} />
+      <div className="no-print">
+        <Footer onNavigate={onNavigate} />
+      </div>
     </div>
   );
 };
