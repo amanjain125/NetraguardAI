@@ -1,13 +1,14 @@
 import React from 'react';
-import type { ScreeningResult } from '../../types/screening';
+import type { ScreeningResult, SupportedLanguage } from '../../types/screening';
 import { useLanguage } from '../../hooks/useLanguage';
-import { LanguageSelector } from '../common/LanguageSelector';
+import { SUPPORTED_LANGUAGES } from '../../data/translations';
 import { 
   HeartHandshake, 
   AlertCircle, 
   CheckCircle2, 
   Printer, 
-  PhoneCall
+  PhoneCall,
+  Globe
 } from 'lucide-react';
 import { formatDate } from '../../utils/formatters';
 
@@ -17,7 +18,7 @@ interface Props {
 }
 
 export const PatientFriendlyReport: React.FC<Props> = ({ result, onPrint }) => {
-  const { t, language } = useLanguage();
+  const { t, language, setLanguage } = useLanguage();
 
   const isReferable = result.referable;
 
@@ -40,11 +41,28 @@ export const PatientFriendlyReport: React.FC<Props> = ({ result, onPrint }) => {
           </div>
 
           {/* Right Action: Language Switcher for Patient Guidance (Hidden in Print) */}
-          <div className="no-print flex flex-col items-start sm:items-end gap-2 bg-white/10 p-3 rounded-2xl backdrop-blur-xs">
-            <span className="text-[11px] text-sky-200 font-medium">
-              {t.patientReport.selectLanguage}
-            </span>
-            <LanguageSelector />
+          <div className="no-print flex flex-col items-start sm:items-end gap-2 bg-white/10 p-3 rounded-2xl backdrop-blur-xs shrink-0">
+            <div className="flex items-center gap-1.5 text-xs text-sky-200 font-medium">
+              <Globe className="w-3.5 h-3.5 text-sky-300" />
+              <span>{t.patientReport.selectLanguage}</span>
+            </div>
+            
+            <div className="flex items-center gap-1 bg-black/20 p-1 rounded-xl">
+              {SUPPORTED_LANGUAGES.map((langOption) => (
+                <button
+                  key={langOption.code}
+                  type="button"
+                  onClick={() => setLanguage(langOption.code as SupportedLanguage)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    language === langOption.code
+                      ? 'bg-white text-slate-950 shadow-sm font-extrabold'
+                      : 'text-sky-100 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  {langOption.nativeLabel}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Print-only Language & Platform Badge */}
