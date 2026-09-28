@@ -1,7 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { ScreeningResult, SupportedLanguage } from '../../types/screening';
 import { useLanguage } from '../../hooks/useLanguage';
-import { SUPPORTED_LANGUAGES } from '../../data/translations';
+import { SUPPORTED_LANGUAGES, translations } from '../../data/translations';
 import logoImg from '../../assets/logo.jpeg';
 import { 
   HeartHandshake, 
@@ -17,14 +17,21 @@ interface Props {
 }
 
 export const PatientFriendlyReport: React.FC<Props> = ({ result }) => {
-  const { t, language, setLanguage } = useLanguage();
+  const { language: globalLang } = useLanguage();
 
-  // If result has a preferredLanguage specified, switch to it automatically on mount
+  // Local state scoped strictly to the report component so language changes here do not affect the rest of the site
+  const [reportLang, setReportLang] = useState<SupportedLanguage>(
+    () => result.preferredLanguage || globalLang || 'en'
+  );
+
   useEffect(() => {
-    if (result.preferredLanguage && result.preferredLanguage !== language) {
-      setLanguage(result.preferredLanguage);
+    if (result.preferredLanguage) {
+      setReportLang(result.preferredLanguage);
     }
-  }, [result.preferredLanguage, setLanguage, language]);
+  }, [result.preferredLanguage]);
+
+  const activeTranslations = translations[reportLang] || translations.en;
+  const pr = activeTranslations.patientReport;
 
   const isReferable = result.referable;
   const badgeStyle = getSeverityBadgeStyle(result.class);
@@ -38,8 +45,6 @@ export const PatientFriendlyReport: React.FC<Props> = ({ result }) => {
   const patientDisplayAge = result.patientAge || 52;
   const patientDisplayGender = result.patientGender || 'Male';
   const patientDisplayPhone = result.patientPhone || '+91 98765 43210';
-
-  const pr = t.patientReport;
 
   return (
     <div 
@@ -77,14 +82,14 @@ export const PatientFriendlyReport: React.FC<Props> = ({ result }) => {
               {/* Interactive Language Selector (Hidden in Print) */}
               <div className="no-print flex items-center gap-1.5 justify-end bg-slate-100 p-1.5 rounded-xl border border-slate-200">
                 <Globe className="w-3.5 h-3.5 text-sky-700 shrink-0 ml-1" />
-                <span className="text-[11px] font-bold text-slate-600 mr-1">Language:</span>
+                <span className="text-[11px] font-bold text-slate-600 mr-1">Report Language:</span>
                 {SUPPORTED_LANGUAGES.map((langOption) => (
                   <button
                     key={langOption.code}
                     type="button"
-                    onClick={() => setLanguage(langOption.code as SupportedLanguage)}
+                    onClick={() => setReportLang(langOption.code as SupportedLanguage)}
                     className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      language === langOption.code
+                      reportLang === langOption.code
                         ? 'bg-sky-600 text-white shadow-xs'
                         : 'text-slate-700 hover:bg-slate-200'
                     }`}
@@ -98,7 +103,7 @@ export const PatientFriendlyReport: React.FC<Props> = ({ result }) => {
                 {result.id}
               </div>
               <div className="text-xs text-slate-500 font-medium print:text-xs">
-                <strong>{pr.reportDate || 'Report Date:'}</strong> {formatDate(result.timestamp, language)}
+                <strong>{pr.reportDate || 'Report Date:'}</strong> {formatDate(result.timestamp, reportLang)}
               </div>
               <div className="text-xs text-slate-500 font-medium print:text-xs">
                 <strong>{pr.reportTime || 'Report Time:'}</strong> {formatTime(result.timestamp)}
