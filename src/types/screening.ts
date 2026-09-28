@@ -34,6 +34,7 @@ export interface ScreeningResult {
   patientAge?: number;
   patientGender?: 'Male' | 'Female' | 'Other';
   patientPhone?: string;
+  preferredLanguage?: SupportedLanguage;
   centerLocation?: string;
   timestamp: string;
   

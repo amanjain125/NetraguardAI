@@ -1,14 +1,12 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import type { ScreeningResult, SupportedLanguage } from '../../types/screening';
 import { useLanguage } from '../../hooks/useLanguage';
 import { SUPPORTED_LANGUAGES } from '../../data/translations';
 import logoImg from '../../assets/logo.jpeg';
 import { 
   HeartHandshake, 
-  AlertCircle, 
   CheckCircle2, 
   Award,
-  Stethoscope,
   Globe
 } from 'lucide-react';
 import { formatDate, formatTime, getSeverityBadgeStyle } from '../../utils/formatters';
@@ -20,6 +18,13 @@ interface Props {
 
 export const PatientFriendlyReport: React.FC<Props> = ({ result }) => {
   const { t, language, setLanguage } = useLanguage();
+
+  // If result has a preferredLanguage specified, switch to it automatically on mount
+  useEffect(() => {
+    if (result.preferredLanguage && result.preferredLanguage !== language) {
+      setLanguage(result.preferredLanguage);
+    }
+  }, [result.preferredLanguage, setLanguage, language]);
 
   const isReferable = result.referable;
   const badgeStyle = getSeverityBadgeStyle(result.class);
@@ -33,6 +38,8 @@ export const PatientFriendlyReport: React.FC<Props> = ({ result }) => {
   const patientDisplayAge = result.patientAge || 52;
   const patientDisplayGender = result.patientGender || 'Male';
   const patientDisplayPhone = result.patientPhone || '+91 98765 43210';
+
+  const pr = t.patientReport;
 
   return (
     <div 
@@ -91,10 +98,10 @@ export const PatientFriendlyReport: React.FC<Props> = ({ result }) => {
                 {result.id}
               </div>
               <div className="text-xs text-slate-500 font-medium print:text-xs">
-                <strong>Report Date:</strong> {formatDate(result.timestamp, language)}
+                <strong>{pr.reportDate || 'Report Date:'}</strong> {formatDate(result.timestamp, language)}
               </div>
               <div className="text-xs text-slate-500 font-medium print:text-xs">
-                <strong>Report Time:</strong> {formatTime(result.timestamp)}
+                <strong>{pr.reportTime || 'Report Time:'}</strong> {formatTime(result.timestamp)}
               </div>
             </div>
           </div>
@@ -102,48 +109,48 @@ export const PatientFriendlyReport: React.FC<Props> = ({ result }) => {
           {/* 2. PATIENT DEMOGRAPHICS & ADMINISTRATIVE BOX */}
           <div className="bg-slate-50 rounded-2xl border border-slate-300 p-6 space-y-4 print:p-5 print:space-y-3 print:rounded-2xl">
             <div className="text-xs font-extrabold text-slate-900 uppercase tracking-wider border-b border-slate-200 pb-2 flex items-center justify-between">
-              <span>Patient Demographic &amp; Administrative Record</span>
+              <span>{pr.demographicsLabel}</span>
               <span className="text-xs font-mono text-slate-500 font-normal">UHID Confidential Record</span>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs print:grid-cols-4 print:gap-x-6 print:gap-y-3 print:text-xs">
               <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">{t.patientReport.demographicsLabel}</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">{pr.demographicsLabel}</span>
                 <span className="font-extrabold text-slate-900 text-sm block">{patientDisplayName}</span>
               </div>
 
               <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">{t.patientReport.patientIdLabel}</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">{pr.patientIdLabel}</span>
                 <span className="font-mono font-bold text-sky-700 text-sm block">{result.patientId}</span>
               </div>
 
               <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Age / Gender</span>
-                <span className="font-bold text-slate-900 text-sm block">{patientDisplayAge} {t.patientReport.yearsOld} / {patientDisplayGender}</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">{pr.ageGender || 'Age / Gender'}</span>
+                <span className="font-bold text-slate-900 text-sm block">{patientDisplayAge} {pr.yearsOld} / {patientDisplayGender}</span>
               </div>
 
               <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Contact Phone</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">{pr.contactPhone || 'Contact Phone'}</span>
                 <span className="font-mono font-medium text-slate-800 text-xs block">{patientDisplayPhone}</span>
               </div>
 
               <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">{t.patientReport.healthCenterLabel}</span>
-                <span className="font-semibold text-slate-800 block">{result.centerLocation || t.patientReport.primaryHealthCenter}</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">{pr.healthCenterLabel}</span>
+                <span className="font-semibold text-slate-800 block">{result.centerLocation || pr.primaryHealthCenter}</span>
               </div>
 
               <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Attending Clinician</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">{pr.attendingClinician || 'Attending Clinician'}</span>
                 <span className="font-semibold text-slate-800 block">{doctorDisplayName}</span>
               </div>
 
               <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Exam Type</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">{pr.examType || 'Exam Type'}</span>
                 <span className="font-semibold text-slate-800 block">45° Fundus Tele-Screening</span>
               </div>
 
               <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Diagnostic Engine</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">{pr.diagnosticEngine || 'Diagnostic Engine'}</span>
                 <span className="font-semibold text-emerald-700 block">ResNet-18 ONNX Engine</span>
               </div>
             </div>
@@ -155,10 +162,10 @@ export const PatientFriendlyReport: React.FC<Props> = ({ result }) => {
               <div>
                 <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1 flex items-center gap-1.5">
                   <HeartHandshake className="w-4 h-4 text-sky-700" />
-                  <span>{t.patientReport.whatFound}</span>
+                  <span>{pr.whatFound}</span>
                 </div>
                 <h2 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight print:text-lg">
-                  {isReferable ? t.patientReport.referralTitle : t.patientReport.healthyTitle}
+                  {isReferable ? pr.referralTitle : pr.healthyTitle}
                 </h2>
               </div>
 
@@ -167,7 +174,7 @@ export const PatientFriendlyReport: React.FC<Props> = ({ result }) => {
                   isReferable ? 'bg-rose-100 text-rose-900 border-rose-300' : 'bg-emerald-100 text-emerald-900 border-emerald-300'
                 }`}>
                   <span className={`w-2.5 h-2.5 rounded-full ${isReferable ? 'bg-rose-600' : 'bg-emerald-600'}`}></span>
-                  {isReferable ? 'SPECIALIST CHECKUP RECOMMENDED' : 'HEALTHY RETINA DETECTED'}
+                  {isReferable ? (pr.specialistRecommended || 'SPECIALIST CHECKUP RECOMMENDED') : (pr.healthyDetected || 'HEALTHY RETINA DETECTED')}
                 </span>
                 <div className="text-xs font-mono font-semibold text-slate-500 mt-1">
                   ICD-10 Code: E11.3{result.class}
@@ -178,32 +185,32 @@ export const PatientFriendlyReport: React.FC<Props> = ({ result }) => {
             {/* Simple Explanation Content */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs pt-1 print:grid-cols-2 print:gap-4 print:text-xs">
               <div className="p-3.5 rounded-xl bg-white/90 border border-slate-200 leading-relaxed">
-                <strong className="text-slate-900 block mb-1">{t.patientReport.whatMeans}:</strong>
+                <strong className="text-slate-900 block mb-1">{pr.whatMeans}:</strong>
                 <p className="text-slate-700">
-                  {isReferable ? t.patientReport.whatMeansReferable : t.patientReport.whatMeansHealthy}
+                  {isReferable ? pr.whatMeansReferable : pr.whatMeansHealthy}
                 </p>
               </div>
 
               <div className="p-3.5 rounded-xl bg-white/90 border border-slate-200 leading-relaxed">
-                <strong className="text-slate-900 block mb-1">{t.patientReport.nextSteps}:</strong>
+                <strong className="text-slate-900 block mb-1">{pr.nextSteps}:</strong>
                 <p className="text-slate-700 font-semibold">
-                  {isReferable ? t.patientReport.nextStepsReferableTitle : t.patientReport.nextStepsHealthyTitle}
+                  {isReferable ? pr.nextStepsReferableTitle : pr.nextStepsHealthyTitle}
                 </p>
                 <p className="text-slate-600 mt-0.5">
-                  {isReferable ? t.patientReport.nextStepsReferableDesc : t.patientReport.nextStepsHealthyDesc}
+                  {isReferable ? pr.nextStepsReferableDesc : pr.nextStepsHealthyDesc}
                 </p>
               </div>
             </div>
 
             <div className="p-4 rounded-xl bg-white border border-slate-200 text-xs text-slate-800 leading-relaxed font-medium print:p-3.5 print:text-xs">
-              <strong>Clinical Directive:</strong> {result.recommendation}
+              <strong>{pr.clinicalDirective || 'Clinical Directive:'}</strong> {result.recommendation}
             </div>
           </div>
 
-          {/* 4. LESION & BIOMARKER CLINICAL FINDINGS SUMMARY TABLE (SIMPLE TERMS) */}
+          {/* 4. LESION & BIOMARKER CLINICAL FINDINGS SUMMARY TABLE (SIMPLE TERMS & MULTI-LANGUAGE) */}
           <div className="space-y-3.5 print:space-y-3">
             <div className="text-xs font-extrabold text-slate-900 uppercase tracking-wider border-b border-slate-200 pb-2 flex items-center justify-between">
-              <span>Pathological Biomarker Summary</span>
+              <span>{pr.biomarkerTitle || 'Pathological Biomarker Summary'}</span>
               <span className="text-xs font-mono text-slate-500">Automated Fundus Lesion Triage</span>
             </div>
 
@@ -211,69 +218,74 @@ export const PatientFriendlyReport: React.FC<Props> = ({ result }) => {
               <table className="w-full text-left border-collapse text-xs print:text-[10pt]">
                 <thead>
                   <tr className="bg-slate-100 text-slate-700 font-bold uppercase tracking-wider text-[10px] border-b border-slate-300">
-                    <th className="p-3.5 print:p-3">Eye Feature / Lesion Type</th>
-                    <th className="p-3.5 print:p-3">Status</th>
-                    <th className="p-3.5 print:p-3">Simple Health Explanation</th>
+                    <th className="p-3.5 print:p-3">{pr.eyeFeatureCol || 'Eye Feature / Lesion Type'}</th>
+                    <th className="p-3.5 print:p-3">{pr.statusCol || 'Status'}</th>
+                    <th className="p-3.5 print:p-3">{pr.explanationCol || 'Simple Health Explanation'}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 font-medium">
+                  {/* Microaneurysms */}
                   <tr>
-                    <td className="p-3.5 print:p-3 font-bold text-slate-900">Microaneurysms (Blood Vessel Dots)</td>
+                    <td className="p-3.5 print:p-3 font-bold text-slate-900">{pr.microaneurysmsName || 'Microaneurysms (Blood Vessel Dots)'}</td>
                     <td className="p-3.5 print:p-3">
                       <span className={`px-3 py-1 rounded-md text-xs font-bold ${result.class >= 1 ? 'bg-amber-100 text-amber-900' : 'bg-emerald-100 text-emerald-900'}`}>
-                        {result.class >= 1 ? 'Present' : 'Absent'}
+                        {result.class >= 1 ? (pr.present || 'Present') : (pr.absent || 'Absent')}
                       </span>
                     </td>
                     <td className="p-3.5 print:p-3 text-slate-600">
-                      {result.class >= 1 ? 'Tiny swollen blood vessel pouches detected in retinal blood vessels' : 'No swelling or pouches seen in tiny retinal blood vessels'}
+                      {result.class >= 1 ? (pr.microaneurysmsPresent || 'Tiny swollen blood vessel pouches detected in retinal blood vessels') : (pr.microaneurysmsAbsent || 'No swelling or pouches seen in tiny retinal blood vessels')}
                     </td>
                   </tr>
 
+                  {/* Retinal Hemorrhages */}
                   <tr>
-                    <td className="p-3.5 print:p-3 font-bold text-slate-900">Retinal Hemorrhages (Micro Bleeding)</td>
+                    <td className="p-3.5 print:p-3 font-bold text-slate-900">{pr.hemorrhagesName || 'Retinal Hemorrhages (Micro Bleeding)'}</td>
                     <td className="p-3.5 print:p-3">
                       <span className={`px-3 py-1 rounded-md text-xs font-bold ${result.class >= 2 ? 'bg-amber-100 text-amber-900' : 'bg-emerald-100 text-emerald-900'}`}>
-                        {result.class >= 2 ? 'Present' : 'Absent'}
+                        {result.class >= 2 ? (pr.present || 'Present') : (pr.absent || 'Absent')}
                       </span>
                     </td>
                     <td className="p-3.5 print:p-3 text-slate-600">
-                      {result.class >= 2 ? 'Small blood leakage spots identified inside retina layers' : 'No blood spots or vessel leakage observed inside the retina'}
+                      {result.class >= 2 ? (pr.hemorrhagesPresent || 'Small blood leakage spots identified inside retina layers') : (pr.hemorrhagesAbsent || 'No blood spots or vessel leakage observed inside the retina')}
                     </td>
                   </tr>
 
+                  {/* Hard Exudates */}
                   <tr>
-                    <td className="p-3.5 print:p-3 font-bold text-slate-900">Hard Exudates (Lipid/Fat Deposits)</td>
+                    <td className="p-3.5 print:p-3 font-bold text-slate-900">{pr.hardExudatesName || 'Hard Exudates (Lipid/Fat Deposits)'}</td>
                     <td className="p-3.5 print:p-3">
                       <span className={`px-3 py-1 rounded-md text-xs font-bold ${result.class >= 2 ? 'bg-amber-100 text-amber-900' : 'bg-emerald-100 text-emerald-900'}`}>
-                        {result.class >= 2 ? 'Present' : 'Absent'}
+                        {result.class >= 2 ? (pr.present || 'Present') : (pr.absent || 'Absent')}
                       </span>
                     </td>
                     <td className="p-3.5 print:p-3 text-slate-600">
-                      {result.class >= 2 ? 'Yellowish protein/fat deposits clustered near central vision zone' : 'No protein or fat deposit spots seen near posterior pole'}
+                      {result.class >= 2 ? (pr.hardExudatesPresent || 'Yellowish protein/fat deposits clustered near central vision zone') : (pr.hardExudatesAbsent || 'No protein or fat deposit spots seen near posterior pole')}
                     </td>
                   </tr>
 
+                  {/* Cotton Wool Spots */}
                   <tr>
-                    <td className="p-3.5 print:p-3 font-bold text-slate-900">Cotton Wool Spots (Nerve Fiber Spots)</td>
+                    <td className="p-3.5 print:p-3 font-bold text-slate-900">{pr.cottonWoolSpotsName || 'Cotton Wool Spots (Nerve Fiber Spots)'}</td>
                     <td className="p-3.5 print:p-3">
                       <span className={`px-3 py-1 rounded-md text-xs font-bold ${result.class >= 3 ? 'bg-rose-100 text-rose-900' : 'bg-emerald-100 text-emerald-900'}`}>
-                        {result.class >= 3 ? 'Present' : 'Absent'}
+                        {result.class >= 3 ? (pr.present || 'Present') : (pr.absent || 'Absent')}
                       </span>
                     </td>
                     <td className="p-3.5 print:p-3 text-slate-600">
-                      {result.class >= 3 ? 'Fluffy white spots showing reduced blood flow to nerve fiber layers' : 'No nerve fiber swelling or micro-infarct spots detected'}
+                      {result.class >= 3 ? (pr.cottonWoolSpotsPresent || 'Fluffy white spots showing reduced blood flow to nerve fiber layers') : (pr.cottonWoolSpotsAbsent || 'No nerve fiber swelling or micro-infarct spots detected')}
                     </td>
                   </tr>
 
+                  {/* Neovascularization */}
                   <tr>
-                    <td className="p-3.5 print:p-3 font-bold text-slate-900">Neovascularization (Fragile New Vessels)</td>
+                    <td className="p-3.5 print:p-3 font-bold text-slate-900">{pr.neovascularizationName || 'Neovascularization (Fragile New Vessels)'}</td>
                     <td className="p-3.5 print:p-3">
                       <span className={`px-3 py-1 rounded-md text-xs font-bold ${result.class >= 4 ? 'bg-rose-100 text-rose-900' : 'bg-emerald-100 text-emerald-900'}`}>
-                        {result.class >= 4 ? 'Present' : 'Absent'}
+                        {result.class >= 4 ? (pr.present || 'Present') : (pr.absent || 'Absent')}
                       </span>
                     </td>
                     <td className="p-3.5 print:p-3 text-slate-600">
-                      {result.class >= 4 ? 'Abnormal new blood vessels growing in retina requiring urgent treatment' : 'No abnormal new blood vessel growth detected'}
+                      {result.class >= 4 ? (pr.neovascularizationPresent || 'Abnormal new blood vessels growing in retina requiring urgent treatment') : (pr.neovascularizationAbsent || 'No abnormal new blood vessel growth detected')}
                     </td>
                   </tr>
                 </tbody>
@@ -285,7 +297,7 @@ export const PatientFriendlyReport: React.FC<Props> = ({ result }) => {
         {/* PAGE 1 PRINT FOOTER */}
         <div className="hidden print:flex items-center justify-between text-xs text-slate-400 pt-4 border-t-2 border-slate-200 mt-auto">
           <span>NETRAGUARD TELE-RETINOPATHY SYSTEM · REPORT ID: {result.id}</span>
-          <span className="font-bold text-slate-700">Page 1 of 2 - Patient Eye Health Guidance</span>
+          <span className="font-bold text-slate-700">{pr.page1Footer || 'Page 1 of 2 - Patient Eye Health Guidance'}</span>
         </div>
 
       </div>
@@ -322,7 +334,7 @@ export const PatientFriendlyReport: React.FC<Props> = ({ result }) => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-2">
             <div className="border-2 border-slate-200 rounded-xl p-3 text-center bg-slate-50 space-y-2">
               <div className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                1. Original 45° Retinal Fundus Scan
+                {pr.originalScanTitle || '1. Original 45° Retinal Fundus Scan'}
               </div>
               <div className="h-56 flex items-center justify-center bg-slate-950 rounded-lg overflow-hidden border border-slate-300">
                 <img 
@@ -332,13 +344,13 @@ export const PatientFriendlyReport: React.FC<Props> = ({ result }) => {
                 />
               </div>
               <p className="text-[10px] text-slate-500 italic">
-                Raw photograph of back of eye acquired at health center
+                {pr.originalScanDesc || 'Raw photograph of back of eye acquired at health center'}
               </p>
             </div>
 
             <div className="border-2 border-slate-200 rounded-xl p-3 text-center bg-slate-50 space-y-2">
               <div className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                2. AI Lesion Salience Overlay (Grad-CAM)
+                {pr.gradCamScanTitle || '2. AI Lesion Salience Overlay (Grad-CAM)'}
               </div>
               <div className="h-56 flex items-center justify-center bg-slate-950 rounded-lg overflow-hidden border border-slate-300">
                 <img 
@@ -349,9 +361,9 @@ export const PatientFriendlyReport: React.FC<Props> = ({ result }) => {
               </div>
               {/* Legend */}
               <div className="bg-black/90 text-white rounded-md px-3 py-1 text-[9px] flex items-center justify-between font-mono">
-                <span>0.0 (Low Salience)</span>
+                <span>{pr.gradCamLow || '0.0 (Low Salience)'}</span>
                 <div className="w-24 h-2 rounded-full bg-gradient-to-r from-blue-600 via-cyan-400 via-amber-400 to-red-600"></div>
-                <span className="text-rose-400 font-bold">1.0 (High Activation)</span>
+                <span className="text-rose-400 font-bold">{pr.gradCamHigh || '1.0 (High Activation)'}</span>
               </div>
             </div>
           </div>
@@ -362,14 +374,14 @@ export const PatientFriendlyReport: React.FC<Props> = ({ result }) => {
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
             <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">
-              {t.patientReport.importantInfo}
+              {pr.importantInfo}
             </h3>
           </div>
 
           <ul className="text-xs text-slate-700 space-y-2 list-disc pl-5 leading-relaxed font-medium">
-            <li>{t.patientReport.tip1}</li>
-            <li>{t.patientReport.tip2}</li>
-            <li>{t.patientReport.tip3}</li>
+            <li>{pr.tip1}</li>
+            <li>{pr.tip2}</li>
+            <li>{pr.tip3}</li>
           </ul>
         </div>
 
@@ -398,7 +410,7 @@ export const PatientFriendlyReport: React.FC<Props> = ({ result }) => {
             </div>
             <div className="text-xs text-emerald-700 font-bold uppercase tracking-wider flex items-center justify-center sm:justify-end gap-1.5 pt-1">
               <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span>Digitally Authorized &amp; Signed</span>
+              <span>{pr.digitallySigned || 'Digitally Authorized & Signed'}</span>
             </div>
           </div>
         </div>
@@ -406,7 +418,7 @@ export const PatientFriendlyReport: React.FC<Props> = ({ result }) => {
         {/* PAGE 2 PRINT FOOTER */}
         <div className="hidden print:flex items-center justify-between text-[10px] text-slate-400 pt-4 border-t border-slate-200">
           <span>NETRAGUARD CLINICAL OPHTHALMOLOGY REPORT · CONFIDENTIAL MEDICAL RECORD</span>
-          <span className="font-bold text-slate-600">Page 2 of 2 - Patient Retinal Health Record</span>
+          <span className="font-bold text-slate-600">{pr.page2Footer || 'Page 2 of 2 - Patient Retinal Health Record'}</span>
         </div>
 
       </div>
