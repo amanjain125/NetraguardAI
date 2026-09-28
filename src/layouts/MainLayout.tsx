@@ -17,12 +17,12 @@ interface Props {
 export const MainLayout: React.FC<Props> = ({ children, currentPage, onNavigate, currentDoctor, onLogout }) => {
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans selection:bg-sky-100 selection:text-sky-900">
+
+
       {/* Top Clinical Safety Banner */}
       <div className="no-print">
         <MedicalDisclaimer variant="banner" />
       </div>
-
-      {/* Main Navbar with Doctor session */}
       <div className="no-print">
         <Navbar
           currentPage={currentPage}

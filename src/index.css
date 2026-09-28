@@ -41,20 +41,22 @@
 }
 
 /* ========================================================================= */
-/* Medical Report Print & PDF Export Styles                                   */
+/* Medical Report Print & PDF Export Styles (2-Page Executive Layout)        */
 /* ========================================================================= */
 @page {
   size: A4 portrait;
-  margin: 10mm 12mm 12mm 12mm;
+  margin: 10mm 12mm;
 }
 
 @media print {
-  /* Force all modern browsers to keep colors, backgrounds, and gradients */
+  /* 1. Preserves exact background colors, borders, badges, and text colors */
   *,
   *::before,
   *::after {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
   }
 
   html, body {
@@ -62,11 +64,12 @@
     color: #0f172a !important;
     margin: 0 !important;
     padding: 0 !important;
-    font-size: 11pt !important;
+    font-size: 10pt !important;
+    line-height: 1.4 !important;
     width: 100% !important;
   }
 
-  /* Completely eliminate sticky headers, navbar, footers, buttons, and no-print UI */
+  /* 2. Completely hide all non-report UI elements */
   header,
   nav,
   footer,
@@ -74,6 +77,7 @@
   button,
   input,
   select,
+  textarea,
   [data-no-print="true"] {
     display: none !important;
     visibility: hidden !important;
@@ -82,13 +86,13 @@
     padding: 0 !important;
   }
 
-  /* Reset position of all containers to static so nothing floats across pages */
+  /* Reset position of all sticky components */
   header, nav, .sticky, [class*="sticky"] {
     position: static !important;
     display: none !important;
   }
 
-  /* Make report container fill the entire page cleanly without margins */
+  /* 3. Make report container fill the entire page cleanly without margins */
   main,
   #root,
   .max-w-4xl,
@@ -99,25 +103,64 @@
     margin: 0 !important;
     padding: 0 !important;
     box-shadow: none !important;
+    border: none !important;
   }
 
-  /* Prevent awkward page breaks inside cards */
+  /* 4. Report card reset for crisp letterhead print */
+  #clinical-report,
+  #patient-report {
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+
+  /* 5. Prevent awkward page breaks inside cards */
   .rounded-2xl,
   .rounded-3xl,
   .border,
+  table,
+  tr,
   .grid > div {
     break-inside: avoid !important;
     page-break-inside: avoid !important;
   }
 
-  /* Ensure text is dark and legible on printed paper */
-  .text-white {
-    color: #ffffff !important;
+  /* Explicit Page Break for Page 2 (with top margin offset) */
+  .print-page-break {
+    page-break-before: always !important;
+    break-before: page !important;
+    padding-top: 10mm !important;
+    margin-top: 4mm !important;
   }
 
-  /* Remove dropshadows to prevent muddy prints */
-  * {
-    box-shadow: none !important;
-    text-shadow: none !important;
+  /* 6. Clean image scaling for retinal fundus scans & heatmaps */
+  img {
+    max-width: 100% !important;
+    max-height: 220px !important;
+    object-fit: contain !important;
+  }
+
+  /* 7. Ensure text is dark and legible on printed paper */
+  .text-slate-900,
+  .text-slate-950 {
+    color: #020617 !important;
+  }
+
+  .text-slate-500,
+  .text-slate-600 {
+    color: #334155 !important;
+  }
+
+  /* 8. Table crisp border styling */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+  th, td {
+    padding: 6px 10px !important;
+    font-size: 9.5pt !important;
   }
 }

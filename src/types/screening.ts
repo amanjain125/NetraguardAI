@@ -30,8 +30,10 @@ export interface ImageQualityMetrics {
 export interface ScreeningResult {
   id: string;
   patientId: string;
+  patientName?: string;
   patientAge?: number;
   patientGender?: 'Male' | 'Female' | 'Other';
+  patientPhone?: string;
   centerLocation?: string;
   timestamp: string;
   

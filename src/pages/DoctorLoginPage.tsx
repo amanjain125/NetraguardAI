@@ -10,9 +10,7 @@ import {
   EyeOff, 
   UserCheck,
   User,
-  CheckCircle2,
-  X,
-  UserPlus
+  CheckCircle2
 } from 'lucide-react';
 import logoImg from '../assets/logo.jpeg';
 import type { DoctorProfile } from '../types/auth';
@@ -46,12 +44,7 @@ export const DoctorLoginPage: React.FC<Props> = ({ onLoginSuccess, onReplaySplas
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  // Google Account Chooser Modal state
-  const [showGoogleModal, setShowGoogleModal] = useState(false);
-  const [googleCustomEmail, setGoogleCustomEmail] = useState('');
-  const [googleCustomName, setGoogleCustomName] = useState('');
-  const [showCustomGoogleInput, setShowCustomGoogleInput] = useState(false);
-  const [googleSigningIn, setGoogleSigningIn] = useState(false);
+
 
   // 1. Handle Sign In (SQLite API backend integration with client fallback)
   const handleSignIn = async (e: React.FormEvent) => {
@@ -172,37 +165,7 @@ export const DoctorLoginPage: React.FC<Props> = ({ onLoginSuccess, onReplaySplas
     }, 1200);
   };
 
-  // 3. Handle Choosing a Google Account
-  const handleSelectGoogleAccount = (chosenName: string, chosenEmail: string) => {
-    setGoogleSigningIn(true);
 
-    setTimeout(() => {
-      setGoogleSigningIn(false);
-      setShowGoogleModal(false);
-
-      const formattedName = chosenName.startsWith('Dr.') ? chosenName : `Dr. ${chosenName}`;
-
-      const googleDoctor: DoctorProfile = {
-        id: `DOC-GGL-${Date.now().toString().slice(-4)}`,
-        name: formattedName,
-        email: chosenEmail,
-        role: 'Verified Google Clinician',
-        specialty: 'Ophthalmic Consultant & Retinal Specialist',
-        hospital: 'Google Health Verified Healthcare Network',
-        registrationNumber: 'GGL-OAUTH-2026',
-      };
-
-      saveRegisteredDoctor(googleDoctor);
-      onLoginSuccess(googleDoctor);
-    }, 600);
-  };
-
-  const handleCustomGoogleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!googleCustomEmail.trim()) return;
-    const derivedName = googleCustomName.trim() || googleCustomEmail.split('@')[0].replace('.', ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-    handleSelectGoogleAccount(derivedName, googleCustomEmail.trim());
-  };
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-10 sm:px-6 lg:px-8 relative overflow-hidden text-slate-900 selection:bg-sky-100 selection:text-sky-900">
@@ -298,45 +261,7 @@ export const DoctorLoginPage: React.FC<Props> = ({ onLoginSuccess, onReplaySplas
             </div>
           )}
 
-          {/* Sign In with Google Button (Triggers authentic Google Account Chooser) */}
-          <div>
-            <button
-              type="button"
-              onClick={() => setShowGoogleModal(true)}
-              className="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 hover:text-slate-900 font-semibold text-xs shadow-2xs transition-all cursor-pointer active:scale-[0.99]"
-            >
-              <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                <path
-                  fill="#4285F4"
-                  d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24Z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.04 0 12s.45 3.82 1.25 5.42l4.03-3.15Z"
-                />
-                <path
-                  fill="#EA4335"
-                  d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98Z"
-                />
-              </svg>
-              <span>Continue with Google</span>
-            </button>
-
-            <div className="relative my-4">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-200"></div>
-              </div>
-              <div className="relative flex justify-center text-[11px] uppercase tracking-wider">
-                <span className="bg-white px-3 text-slate-400 font-semibold font-mono">
-                  or continue with credentials
-                </span>
-              </div>
-            </div>
-          </div>
+        
 
           {/* ========================================================================= */}
           {/* TAB 1: SIGN IN FORM (Clean: Email + Password)                             */}
@@ -590,158 +515,7 @@ export const DoctorLoginPage: React.FC<Props> = ({ onLoginSuccess, onReplaySplas
         </div>
       </div>
 
-      {/* ========================================================================= */}
-      {/* GOOGLE ACCOUNT CHOOSER MODAL (Authentic Google Sign-In Dialog)             */}
-      {/* ========================================================================= */}
-      {showGoogleModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-sm w-full p-6 space-y-5 animate-in zoom-in-95 duration-200 relative">
-            
-            {/* Modal Header */}
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <svg className="w-6 h-6 shrink-0" viewBox="0 0 24 24">
-                  <path
-                    fill="#4285F4"
-                    d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24Z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.04 0 12s.45 3.82 1.25 5.42l4.03-3.15Z"
-                  />
-                  <path
-                    fill="#EA4335"
-                    d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98Z"
-                  />
-                </svg>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900 leading-tight">
-                    Choose an account
-                  </h3>
-                  <p className="text-xs text-slate-500">to continue to NetraGuard AI</p>
-                </div>
-              </div>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setShowGoogleModal(false);
-                  setShowCustomGoogleInput(false);
-                }}
-                className="p-1 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {googleSigningIn ? (
-              <div className="py-8 flex flex-col items-center justify-center space-y-3">
-                <div className="w-8 h-8 border-3 border-sky-200 border-t-sky-600 rounded-full animate-spin"></div>
-                <p className="text-xs font-semibold text-slate-700">Connecting Google Account...</p>
-              </div>
-            ) : (
-              <div className="space-y-1 border-t border-b border-slate-100 py-2">
-                {/* Account 1 */}
-                <button
-                  type="button"
-                  onClick={() => handleSelectGoogleAccount('Dr. Kalyani Sharma', 'kalyani4156@gmail.com')}
-                  className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 text-left transition-colors cursor-pointer group"
-                >
-                  <div className="w-9 h-9 rounded-full bg-purple-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
-                    K
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-bold text-slate-900 group-hover:text-sky-600 truncate">
-                      Kalyani Sharma
-                    </div>
-                    <div className="text-[11px] text-slate-500 truncate">
-                      kalyani4156@gmail.com
-                    </div>
-                  </div>
-                </button>
-
-                {/* Account 2 */}
-                <button
-                  type="button"
-                  onClick={() => handleSelectGoogleAccount('Dr. Aman Jain', 'amanjain125@gmail.com')}
-                  className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 text-left transition-colors cursor-pointer group"
-                >
-                  <div className="w-9 h-9 rounded-full bg-teal-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
-                    A
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-bold text-slate-900 group-hover:text-sky-600 truncate">
-                      Aman Jain
-                    </div>
-                    <div className="text-[11px] text-slate-500 truncate">
-                      amanjain125@gmail.com
-                    </div>
-                  </div>
-                </button>
-
-                {/* Account Option 3: Use Another Account */}
-                {!showCustomGoogleInput ? (
-                  <button
-                    type="button"
-                    onClick={() => setShowCustomGoogleInput(true)}
-                    className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 text-left transition-colors cursor-pointer text-slate-700"
-                  >
-                    <div className="w-9 h-9 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center">
-                      <UserPlus className="w-4 h-4" />
-                    </div>
-                    <span className="text-xs font-semibold text-slate-700">
-                      Use another account
-                    </span>
-                  </button>
-                ) : (
-                  <form onSubmit={handleCustomGoogleSubmit} className="pt-2 space-y-2.5">
-                    <input
-                      type="email"
-                      required
-                      autoFocus
-                      value={googleCustomEmail}
-                      onChange={(e) => setGoogleCustomEmail(e.target.value)}
-                      placeholder="Enter your Gmail address"
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
-                    />
-                    <input
-                      type="text"
-                      value={googleCustomName}
-                      onChange={(e) => setGoogleCustomName(e.target.value)}
-                      placeholder="Your Full Name (optional)"
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
-                    />
-                    <div className="flex justify-end gap-2 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => setShowCustomGoogleInput(false)}
-                        className="px-3 py-1.5 text-xs text-slate-500 hover:text-slate-700"
-                      >
-                        Back
-                      </button>
-                      <button
-                        type="submit"
-                        className="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-sky-600 text-white hover:bg-sky-500"
-                      >
-                        Continue
-                      </button>
-                    </div>
-                  </form>
-                )}
-              </div>
-            )}
-
-            {/* Google privacy footnote */}
-            <p className="text-[10px] text-slate-400 leading-normal text-center">
-              To continue, Google will share your name, email address, language preference, and profile picture with NetraGuard AI.
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
