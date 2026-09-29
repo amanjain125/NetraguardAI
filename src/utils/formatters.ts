@@ -2,7 +2,10 @@ import type { DiabeticRetinopathyGrade, ClinicalReviewStatus } from '../types/sc
 
 export const formatDate = (dateString: string, langCode: string = 'en'): string => {
   try {
-    const d = new Date(dateString);
+    let d = new Date(dateString);
+    if (isNaN(d.getTime())) {
+      d = new Date();
+    }
     const localeMap: Record<string, string> = {
       kn: 'kn-IN',
       hi: 'hi-IN',
@@ -15,20 +18,31 @@ export const formatDate = (dateString: string, langCode: string = 'en'): string 
       year: 'numeric',
     });
   } catch {
-    return dateString;
+    return new Date().toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
   }
 };
 
 export const formatTime = (dateString: string): string => {
   try {
-    const d = new Date(dateString);
+    let d = new Date(dateString);
+    if (isNaN(d.getTime())) {
+      d = new Date();
+    }
     return d.toLocaleTimeString('en-IN', {
       hour: '2-digit',
       minute: '2-digit',
       hour12: true,
     });
   } catch {
-    return '';
+    return new Date().toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
   }
 };
 

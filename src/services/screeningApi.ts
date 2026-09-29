@@ -298,6 +298,20 @@ export class ScreeningService {
       reviewTimestamp: new Date().toISOString(),
     };
 
+    // Also update in DEMO_SCREENING_RECORDS array for state persistence across views
+    const demoIndex = DEMO_SCREENING_RECORDS.findIndex((r) => r.id === id || r.patientId === record?.patientId);
+    if (demoIndex !== -1) {
+      DEMO_SCREENING_RECORDS[demoIndex] = {
+        ...DEMO_SCREENING_RECORDS[demoIndex],
+        doctorNotes: notes,
+        clinicalStatus: status,
+        reviewedBy: doctorName,
+        reviewTimestamp: new Date().toISOString(),
+      };
+    } else {
+      DEMO_SCREENING_RECORDS.unshift(updated);
+    }
+
     return updated;
   }
 }

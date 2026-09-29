@@ -1,6 +1,5 @@
 import React from 'react';
 import type { PageRoute } from '../components/common/Navbar';
-import { MatlabIntegrationBanner } from '../components/screening/MatlabIntegrationBanner';
 import { 
   HelpCircle, 
   Layers, 
@@ -123,9 +122,6 @@ export const HowItWorksPage: React.FC<Props> = ({ onNavigate }) => {
         </p>
       </div>
 
-      {/* MATLAB Notice */}
-      <MatlabIntegrationBanner />
-
       {/* The Problem Section */}
       <div className="bg-white rounded-3xl p-8 sm:p-10 border border-slate-200/90 shadow-xs space-y-6">
         <div className="flex items-center gap-2">
@@ -192,25 +188,6 @@ export const HowItWorksPage: React.FC<Props> = ({ onNavigate }) => {
               </div>
             </div>
           ))}
-        </div>
-      </div>
-
-      {/* Explainable AI Deep Dive */}
-      <div className="bg-gradient-to-br from-slate-900 to-sky-950 text-white rounded-3xl p-8 sm:p-12 shadow-xl relative overflow-hidden">
-        <div className="max-w-2xl space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-white/10 text-sky-300 text-xs font-mono">
-            <Layers className="w-3.5 h-3.5" />
-            <span>Explainable AI (XAI)</span>
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-            Why Grad-CAM is Critical for Clinical Adoption
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-            In medical imaging, a raw probability number like <em>"94% Moderate DR"</em> is not enough. Clinicians need to verify that the neural network attended to actual pathological biomarkers—such as microaneurysms, intraretinal blot hemorrhages, or neovascularization—rather than camera lens dirt, illumination vignetting, or patient eyelashes.
-          </p>
-          <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-            Grad-CAM calculates the gradient of the target class score with respect to the convolutional feature activation map in the final layer. This creates a spatial heatmap that points the clinician's eye directly to the lesions responsible for the triage recommendation.
-          </p>
         </div>
       </div>
 

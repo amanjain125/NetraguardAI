@@ -51,42 +51,42 @@ export const DoctorDashboardTable: React.FC<Props> = ({
     });
   }, [records, searchQuery, activeTab]);
 
-  // Helper for priority badge based on class & referability
+  // Helper for priority badge based on class & referability (Unified single color)
   const getPriority = (rec: ScreeningResult) => {
     if (rec.class >= 2 || rec.prediction.includes('Severe') || rec.prediction.includes('Moderate')) {
-      return { label: 'High', style: 'bg-rose-100 text-rose-900 border border-rose-200' };
+      return { label: 'High', style: 'bg-slate-100 text-slate-700 border border-slate-200' };
     }
     if (rec.class === 1 || rec.prediction.includes('Mild')) {
-      return { label: 'Medium', style: 'bg-amber-100 text-amber-900 border border-amber-200' };
+      return { label: 'Medium', style: 'bg-slate-100 text-slate-700 border border-slate-200' };
     }
-    return { label: 'Low', style: 'bg-emerald-100 text-emerald-900 border border-emerald-200' };
+    return { label: 'Low', style: 'bg-slate-100 text-slate-700 border border-slate-200' };
   };
 
-  // Helper for AI Assessment dot & subtext
+  // Helper for AI Assessment dot & subtext (Unified single color)
   const getAssessmentInfo = (rec: ScreeningResult) => {
     if (rec.class === 0 || rec.prediction.includes('No Apparent') || rec.prediction.includes('No DR')) {
       return {
-        dotColor: 'bg-emerald-500',
+        dotColor: 'bg-slate-400',
         title: 'No DR detected',
         subtitle: 'No apparent DR',
       };
     }
     if (rec.class === 1 || rec.prediction.includes('Mild')) {
       return {
-        dotColor: 'bg-blue-500',
+        dotColor: 'bg-slate-400',
         title: 'Mild NPDR',
         subtitle: 'Few microaneurysms',
       };
     }
     if (rec.class === 2 || rec.prediction.includes('Moderate')) {
       return {
-        dotColor: 'bg-amber-500',
+        dotColor: 'bg-slate-400',
         title: 'Moderate NPDR',
         subtitle: 'Microaneurysms, haemorrhages',
       };
     }
     return {
-      dotColor: 'bg-rose-500',
+      dotColor: 'bg-slate-400',
       title: rec.prediction.includes('Proliferative') ? 'Proliferative DR' : 'Severe NPDR',
       subtitle: 'Multiple lesions',
     };
@@ -94,14 +94,6 @@ export const DoctorDashboardTable: React.FC<Props> = ({
 
   // Helper for Status Pill
   const getStatusBadge = (rec: ScreeningResult) => {
-    if (rec.referable || rec.clinicalStatus === 'Referred' || rec.class >= 2) {
-      return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-800 border border-rose-200">
-          <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
-          <span>Refer to specialist</span>
-        </span>
-      );
-    }
     if (rec.clinicalStatus === 'Reviewed') {
       return (
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
@@ -110,9 +102,17 @@ export const DoctorDashboardTable: React.FC<Props> = ({
         </span>
       );
     }
+    if (rec.clinicalStatus === 'Referred' || rec.referable || rec.class >= 2) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+          <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+          <span>Refer to specialist</span>
+        </span>
+      );
+    }
     return (
-      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200">
-        <Clock className="w-3.5 h-3.5 text-amber-600" />
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-sky-50 text-sky-800 border border-sky-200">
+        <Clock className="w-3.5 h-3.5 text-sky-600" />
         <span>Awaiting review</span>
       </span>
     );
@@ -248,12 +248,13 @@ export const DoctorDashboardTable: React.FC<Props> = ({
 
                 // Format timestamp
                 const d = new Date(record.timestamp);
+                const now = new Date();
                 const dateStr = !isNaN(d.getTime())
                   ? d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-                  : '28 Sept 2026';
+                  : now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
                 const timeStr = !isNaN(d.getTime())
                   ? d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
-                  : '06:30 AM';
+                  : now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 
                 const ageGenderStr = `${record.patientGender || 'Male'}, ${record.patientAge || 52} yrs`;
 
@@ -311,7 +312,7 @@ export const DoctorDashboardTable: React.FC<Props> = ({
                         </div>
                         <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-teal-500 rounded-full"
+                            className="h-full bg-sky-600 rounded-full"
                             style={{ width: `${Math.round(record.confidence * 100)}%` }}
                           ></div>
                         </div>

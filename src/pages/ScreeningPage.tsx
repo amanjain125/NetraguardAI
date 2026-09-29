@@ -1,6 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
 import type { PageRoute } from '../components/common/Navbar';
-import { useLanguage } from '../hooks/useLanguage';
 import { ImageUploader } from '../components/screening/ImageUploader';
 import { MedicalDisclaimer } from '../components/common/MedicalDisclaimer';
 import { ExplainabilityViewer } from '../components/screening/ExplainabilityViewer';
@@ -15,12 +14,8 @@ import {
   ArrowRight, 
   RotateCcw,
   Printer,
-  ShieldCheck,
-  Stethoscope,
   Activity,
   Calendar,
-  Clock,
-  FileText,
   BadgeCheck,
   User,
   Phone,
@@ -37,7 +32,6 @@ interface Props {
 }
 
 export const ScreeningPage: React.FC<Props> = ({ onNavigate, onSetSelectedResult }) => {
-  const { t } = useLanguage();
 
   // Patient Intake Form Fields
   const [patientName, setPatientName] = useState('');
@@ -54,9 +48,18 @@ export const ScreeningPage: React.FC<Props> = ({ onNavigate, onSetSelectedResult
   const [liveResult, setLiveResult] = useState<BackendScreeningResponse | null>(null);
   const [generatedReport, setGeneratedReport] = useState<ScreeningResult | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [formTouched, setFormTouched] = useState(false);
 
   // Scroll Anchor Ref
   const reportSectionRef = useRef<HTMLDivElement>(null);
+
+  // Form Field Validation Flags
+  const isNameValid = Boolean(patientName.trim());
+  const isIdValid = Boolean(patientId.trim());
+  const isAgeValid = typeof patientAge === 'number' && patientAge > 0 && patientAge <= 120;
+  const isPhoneValid = Boolean(patientPhone.trim());
+  const isImageValid = Boolean(selectedFile || previewUrl);
+  const isFormValid = isNameValid && isIdValid && isAgeValid && isPhoneValid && isImageValid;
 
   // Logged-in Doctor Profile
   const loggedDoctor: DoctorProfile | null = useMemo(() => {
@@ -80,8 +83,20 @@ export const ScreeningPage: React.FC<Props> = ({ onNavigate, onSetSelectedResult
    * Submit Patient Intake Form & Analyze Retinal Image
    */
   const handleProceedToScreening = async () => {
-    if (!selectedFile && !previewUrl) {
-      setErrorMessage('Please select or drop a retinal fundus image before continuing.');
+    setFormTouched(true);
+
+    const missingDetails: string[] = [];
+    if (!isNameValid) missingDetails.push('Patient Full Name');
+    if (!isIdValid) missingDetails.push('Patient ID / UHID');
+    if (!isAgeValid) missingDetails.push('Valid Patient Age (1-120)');
+    if (!isPhoneValid) missingDetails.push('Mobile / Phone Number');
+    if (!isImageValid) missingDetails.push('Retinal Fundus Image');
+
+    if (missingDetails.length > 0) {
+      setErrorMessage(
+        `Report Generation Blocked: All patient basic details (Name, ID, Age, Phone) and retinal image scan must be provided before generating a report. Missing: ${missingDetails.join(', ')}.`
+      );
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
@@ -129,10 +144,10 @@ export const ScreeningPage: React.FC<Props> = ({ onNavigate, onSetSelectedResult
 
       const fullResult: ScreeningResult = {
         id: `REP-${Date.now().toString().slice(-6)}`,
-        patientId: patientId.trim() || `PT-${Math.floor(1000 + Math.random() * 9000)}`,
-        patientName: patientName.trim() || 'Unspecified Patient',
-        patientAge: typeof patientAge === 'number' && patientAge > 0 ? patientAge : 0,
-        patientPhone: patientPhone.trim() || 'N/A',
+        patientId: patientId.trim(),
+        patientName: patientName.trim(),
+        patientAge: Number(patientAge),
+        patientPhone: patientPhone.trim(),
         patientGender: patientGender,
         centerLocation: centerLocation.trim() || 'Primary Tele-Retinopathy Center',
         timestamp: new Date().toISOString(),
@@ -183,6 +198,7 @@ export const ScreeningPage: React.FC<Props> = ({ onNavigate, onSetSelectedResult
     setLiveResult(null);
     setGeneratedReport(null);
     setErrorMessage(null);
+    setFormTouched(false);
     setPatientName('');
     setPatientId('');
     setPatientAge('');
@@ -266,6 +282,21 @@ export const ScreeningPage: React.FC<Props> = ({ onNavigate, onSetSelectedResult
         {/* Left Column: STEP 1 Patient Form & STEP 2 Image Uploader */}
         <div className="lg:col-span-8 space-y-6">
           
+          {/* Error Banner when Validation Fails or API Fails */}
+          {errorMessage && (
+            <div className="bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl p-4 sm:p-5 flex items-start gap-3 shadow-xs">
+              <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+              <div className="space-y-1 text-xs">
+                <h4 className="font-bold text-rose-900 text-sm">
+                  Required Patient Information Missing
+                </h4>
+                <p className="leading-relaxed font-medium">
+                  {errorMessage}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* STEP 1: PATIENT INFORMATION INTAKE FORM */}
           <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs p-6 sm:p-8 space-y-5">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -278,12 +309,16 @@ export const ScreeningPage: React.FC<Props> = ({ onNavigate, onSetSelectedResult
                     Patient Demographics & Administrative Intake
                   </h3>
                   <p className="text-xs text-slate-500">
-                    Fill in patient credentials to generate an official hospital report
+                    Fill in all required patient details (* Name, ID, Age, Phone) and upload fundus scan to generate report
                   </p>
                 </div>
               </div>
-              <span className="text-[11px] font-mono text-sky-700 bg-sky-50 px-2.5 py-1 rounded-lg font-semibold border border-sky-100">
-                EHR / HIS Integrated
+              <span className={`text-[11px] font-mono px-2.5 py-1 rounded-lg font-semibold border ${
+                isFormValid 
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                  : 'bg-amber-50 text-amber-700 border-amber-200'
+              }`}>
+                {isFormValid ? '✓ Ready for Report' : 'Incomplete - Details Required'}
               </span>
             </div>
 
@@ -300,8 +335,17 @@ export const ScreeningPage: React.FC<Props> = ({ onNavigate, onSetSelectedResult
                   value={patientName}
                   onChange={(e) => setPatientName(e.target.value)}
                   placeholder="e.g. Ramesh Kumar"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-xs focus:bg-white focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all font-medium"
+                  className={`w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border text-slate-900 text-xs focus:bg-white focus:outline-none transition-all font-medium ${
+                    formTouched && !isNameValid
+                      ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/40'
+                      : 'border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20'
+                  }`}
                 />
+                {formTouched && !isNameValid && (
+                  <p className="text-[11px] text-rose-600 font-medium mt-1">
+                    * Patient full name is required
+                  </p>
+                )}
               </div>
 
               {/* Patient ID */}
@@ -316,8 +360,17 @@ export const ScreeningPage: React.FC<Props> = ({ onNavigate, onSetSelectedResult
                   value={patientId}
                   onChange={(e) => setPatientId(e.target.value)}
                   placeholder="e.g. PT-KA-2048"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-xs font-mono focus:bg-white focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all"
+                  className={`w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border text-slate-900 text-xs font-mono focus:bg-white focus:outline-none transition-all ${
+                    formTouched && !isIdValid
+                      ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/40'
+                      : 'border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20'
+                  }`}
                 />
+                {formTouched && !isIdValid && (
+                  <p className="text-[11px] text-rose-600 font-medium mt-1">
+                    * Patient ID is required
+                  </p>
+                )}
               </div>
 
               {/* Age */}
@@ -334,8 +387,17 @@ export const ScreeningPage: React.FC<Props> = ({ onNavigate, onSetSelectedResult
                   value={patientAge}
                   onChange={(e) => setPatientAge(e.target.value === '' ? '' : Number(e.target.value))}
                   placeholder="e.g. 52"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-xs focus:bg-white focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all font-medium"
+                  className={`w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border text-slate-900 text-xs focus:bg-white focus:outline-none transition-all font-medium ${
+                    formTouched && !isAgeValid
+                      ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/40'
+                      : 'border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20'
+                  }`}
                 />
+                {formTouched && !isAgeValid && (
+                  <p className="text-[11px] text-rose-600 font-medium mt-1">
+                    * Valid patient age (1-120) is required
+                  </p>
+                )}
               </div>
 
               {/* Phone Number */}
@@ -350,8 +412,17 @@ export const ScreeningPage: React.FC<Props> = ({ onNavigate, onSetSelectedResult
                   value={patientPhone}
                   onChange={(e) => setPatientPhone(e.target.value)}
                   placeholder="e.g. +91 98765 43210"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-xs focus:bg-white focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all font-medium"
+                  className={`w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border text-slate-900 text-xs focus:bg-white focus:outline-none transition-all font-medium ${
+                    formTouched && !isPhoneValid
+                      ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/40'
+                      : 'border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20'
+                  }`}
                 />
+                {formTouched && !isPhoneValid && (
+                  <p className="text-[11px] text-rose-600 font-medium mt-1">
+                    * Phone number is required
+                  </p>
+                )}
               </div>
 
               {/* Gender */}

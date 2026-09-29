@@ -551,7 +551,14 @@ def delete_report(report_id: int):
 
 
 if __name__ == "__main__":
+    import sys
     import uvicorn
-    app_module = "main:app" if Path("main.py").exists() else "backend.main:app"
-    uvicorn.run(app_module, host="127.0.0.1", port=8000, reload=True)
+    backend_dir = str(Path(__file__).resolve().parent)
+    project_root = str(Path(__file__).resolve().parent.parent)
+    if backend_dir not in sys.path:
+        sys.path.insert(0, backend_dir)
+    if project_root not in sys.path:
+        sys.path.insert(0, project_root)
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+
 

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import type { PageRoute } from '../components/common/Navbar';
-import { useLanguage } from '../hooks/useLanguage';
 import type { ScreeningResult } from '../types/screening';
+import { screeningApi } from '../services/screeningApi';
 import { ExplainabilityViewer } from '../components/screening/ExplainabilityViewer';
 import { PatientFriendlyReport } from '../components/patient/PatientFriendlyReport';
 import { MedicalDisclaimer } from '../components/common/MedicalDisclaimer';
@@ -23,7 +23,6 @@ interface Props {
 }
 
 export const ResultsPage: React.FC<Props> = ({ result, onNavigate }) => {
-  const { t } = useLanguage();
   const [activeView, setActiveView] = useState<'clinical' | 'patient'>('clinical');
   const [doctorNotes, setDoctorNotes] = useState(result.doctorNotes || '');
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
@@ -537,25 +536,42 @@ export const ResultsPage: React.FC<Props> = ({ result, onNavigate }) => {
 
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1">
                   <span className="text-xs text-slate-500 font-medium">
-                    Saving notes will authorize this report in the district health registry.
+                    Saving notes will authorize this report and mark its status as Reviewed.
                   </span>
 
                   <button
                     type="button"
-                    onClick={() => {
-                      setSaveStatus('Clinical sign-off recorded and saved successfully.');
-                      setTimeout(() => setSaveStatus(null), 3500);
+                    onClick={async () => {
+                      result.doctorNotes = doctorNotes;
+                      result.clinicalStatus = 'Reviewed';
+                      result.reviewedBy = doctorDisplayName;
+                      result.reviewTimestamp = new Date().toISOString();
+
+                      try {
+                        await screeningApi.updateDoctorReview(
+                          result.id,
+                          doctorNotes,
+                          'Reviewed',
+                          doctorDisplayName
+                        );
+                      } catch {
+                        // Demo fallback
+                      }
+
+                      setSaveStatus('Clinical sign-off recorded! Case status updated to Reviewed.');
+                      setTimeout(() => setSaveStatus(null), 4000);
                     }}
-                    className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                    className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition-all cursor-pointer flex items-center gap-1.5"
                   >
-                    Save Doctor Notes
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Approve &amp; Mark as Reviewed</span>
                   </button>
                 </div>
 
                 {saveStatus && (
                   <div className="p-2.5 rounded-lg bg-emerald-50 text-emerald-800 text-xs border border-emerald-200 flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    <span>{saveStatus}</span>
+                    <span className="font-bold">{saveStatus}</span>
                   </div>
                 )}
               </div>

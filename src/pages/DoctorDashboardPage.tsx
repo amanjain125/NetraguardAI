@@ -8,7 +8,6 @@ import { MedicalDisclaimer } from '../components/common/MedicalDisclaimer';
 import { 
   ChevronRight, 
   Calendar, 
-  Brain, 
   RefreshCw,
   PlusCircle,
   Stethoscope
@@ -25,15 +24,12 @@ export const DoctorDashboardPage: React.FC<Props> = ({
 }) => {
   const [records, setRecords] = useState<ScreeningResult[]>([]);
   const [loading, setLoading] = useState(true);
-  const [backendConnected, setBackendConnected] = useState<boolean>(true);
 
   const fetchRecords = async () => {
     setLoading(true);
     try {
       const data = await screeningApi.getScreeningHistory();
       setRecords(data);
-      const isConnected = await screeningApi.isBackendConnected();
-      setBackendConnected(isConnected);
     } finally {
       setLoading(false);
     }
@@ -113,36 +109,6 @@ export const DoctorDashboardPage: React.FC<Props> = ({
             <PlusCircle className="w-4 h-4" />
             <span>New Screening</span>
           </button>
-        </div>
-      </div>
-
-      {/* 2. Dark AI ENGINE Status Banner */}
-      <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 sm:px-6 sm:py-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3 text-white text-xs shadow-lg">
-        {/* Left: AI ENGINE Highlighted Heading */}
-        <div className="flex items-center gap-3">
-          <div className="p-1.5 rounded-lg bg-sky-500/20 text-sky-400 border border-sky-400/30">
-            <Brain className="w-4.5 h-4.5" />
-          </div>
-          <div className="flex items-center gap-2 font-bold">
-            <span className="text-sky-300 font-mono tracking-wider uppercase text-[11px] px-2 py-0.5 rounded bg-sky-500/20 border border-sky-400/30">
-              AI ENGINE
-            </span>
-            <span className="text-slate-600">•</span>
-            <span className="text-white font-bold">MATLAB ResNet-18 + Grad-CAM</span>
-          </div>
-        </div>
-
-        {/* Center: Backend Connection Status */}
-        <div className="flex items-center gap-2 font-bold">
-          <span className={`w-2.5 h-2.5 rounded-full ${backendConnected ? 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.9)]' : 'bg-amber-400'} animate-pulse`}></span>
-          <span className={backendConnected ? 'text-emerald-400 font-extrabold' : 'text-amber-400 font-extrabold'}>
-            {backendConnected ? 'Backend Connected' : 'Offline (Demo Mode)'}
-          </span>
-        </div>
-
-        {/* Right: Last Updated */}
-        <div className="text-slate-400 text-[11px] font-mono">
-          Last updated: {todayStr}, 10:24 AM
         </div>
       </div>
 
