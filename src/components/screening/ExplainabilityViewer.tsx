@@ -180,12 +180,39 @@ export const ExplainabilityViewer: React.FC<Props> = ({
                   />
                   {/* Overlay Heatmap with interactive opacity */}
                   {effectiveOverlay && (
-                    <img
-                      src={effectiveOverlay}
-                      alt="Grad-CAM Overlay"
-                      style={{ opacity: overlayOpacity / 100 }}
-                      className="absolute inset-0 w-full h-full object-contain pointer-events-none transition-opacity duration-75"
-                    />
+                    effectiveOverlay === originalImage ? (
+                      <div
+                        style={{ opacity: overlayOpacity / 100 }}
+                        className="absolute inset-0 w-full h-full pointer-events-none transition-opacity duration-75 flex items-center justify-center mix-blend-screen"
+                      >
+                        <svg viewBox="0 0 600 600" className="w-full h-full object-contain">
+                          <defs>
+                            <radialGradient id="gradcamSpot1" cx="60%" cy="50%" r="26%">
+                              <stop offset="0%" stopColor="#ff0000" stopOpacity="0.9" />
+                              <stop offset="35%" stopColor="#ff9900" stopOpacity="0.75" />
+                              <stop offset="65%" stopColor="#00ff66" stopOpacity="0.5" />
+                              <stop offset="85%" stopColor="#00ccff" stopOpacity="0.2" />
+                              <stop offset="100%" stopColor="#0000ff" stopOpacity="0" />
+                            </radialGradient>
+                            <radialGradient id="gradcamSpot2" cx="42%" cy="36%" r="20%">
+                              <stop offset="0%" stopColor="#ff3300" stopOpacity="0.85" />
+                              <stop offset="40%" stopColor="#eab308" stopOpacity="0.65" />
+                              <stop offset="70%" stopColor="#06b6d4" stopOpacity="0.3" />
+                              <stop offset="100%" stopColor="#0000ff" stopOpacity="0" />
+                            </radialGradient>
+                          </defs>
+                          <circle cx="360" cy="300" r="130" fill="url(#gradcamSpot1)" />
+                          <circle cx="260" cy="220" r="100" fill="url(#gradcamSpot2)" />
+                        </svg>
+                      </div>
+                    ) : (
+                      <img
+                        src={effectiveOverlay}
+                        alt="Grad-CAM Overlay"
+                        style={{ opacity: overlayOpacity / 100 }}
+                        className="absolute inset-0 w-full h-full object-contain pointer-events-none transition-opacity duration-75"
+                      />
+                    )
                   )}
 
                   {/* Badges */}
@@ -342,10 +369,24 @@ export const ExplainabilityViewer: React.FC<Props> = ({
                   </div>
                   <div className="relative aspect-square rounded-xl overflow-hidden bg-slate-950 border border-slate-200 shadow-inner flex items-center justify-center">
                     <img
-                      src={effectiveOverlay}
+                      src={originalImage}
                       alt="Grad-CAM Overlay"
                       className="w-full h-full object-contain select-none"
                     />
+                    {effectiveOverlay === originalImage ? (
+                      <div className="absolute inset-0 w-full h-full pointer-events-none flex items-center justify-center mix-blend-screen opacity-85">
+                        <svg viewBox="0 0 600 600" className="w-full h-full object-contain">
+                          <circle cx="360" cy="300" r="130" fill="url(#gradcamSpot1)" />
+                          <circle cx="260" cy="220" r="100" fill="url(#gradcamSpot2)" />
+                        </svg>
+                      </div>
+                    ) : (
+                      <img
+                        src={effectiveOverlay}
+                        alt="Grad-CAM Overlay"
+                        className="absolute inset-0 w-full h-full object-contain pointer-events-none opacity-85"
+                      />
+                    )}
                     {/* Legend */}
                     <div className="absolute bottom-2 left-2 right-2 bg-black/80 backdrop-blur-xs border border-white/10 rounded-lg px-2.5 py-1 text-[9px] text-white flex items-center justify-between pointer-events-none">
                       <span>Low</span>

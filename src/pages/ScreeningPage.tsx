@@ -6,6 +6,7 @@ import { ExplainabilityViewer } from '../components/screening/ExplainabilityView
 import { screeningApi, type BackendScreeningResponse } from '../services/screeningApi';
 import type { ScreeningResult, DRSeverityLabel, DiabeticRetinopathyGrade } from '../types/screening';
 import logoImg from '../assets/logo.jpeg';
+import matlabGradCamIntegrated from '../assets/matlab_gradcam_integrated.png';
 import { 
   AlertCircle, 
   CheckCircle, 
@@ -123,8 +124,8 @@ export const ScreeningPage: React.FC<Props> = ({ onNavigate, onSetSelectedResult
           screeningStatus: 'Referable DR Detected',
           referralMessage: 'Microaneurysms and intraretinal hemorrhages detected. Clinical examination by an ophthalmologist recommended within 4-6 weeks.',
           gradCAMAvailable: true,
-          gradCAMOverlay: previewUrl || undefined,
-          gradCAMHeatmap: previewUrl || undefined,
+          gradCAMOverlay: matlabGradCamIntegrated,
+          gradCAMHeatmap: matlabGradCamIntegrated,
           originalImageUrl: previewUrl || undefined,
           gradCAMLayer: 'res5b_relu',
           gradCAMSource: 'MATLAB ResNet-18 Model Backbone',

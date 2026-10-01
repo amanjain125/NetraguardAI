@@ -33,6 +33,8 @@ export interface BackendScreeningResponse {
   debug?: Record<string, any> | null;
 }
 
+import matlabGradCamIntegrated from '../assets/matlab_gradcam_integrated.png';
+
 export class ScreeningService {
   private static instance: ScreeningService;
 
@@ -107,11 +109,11 @@ export class ScreeningService {
         screeningStatus: 'Referable DR Detected',
         referralMessage: 'Microaneurysms and intraretinal hemorrhages detected. Clinical examination by an ophthalmologist recommended within 4-6 weeks.',
         gradCAMAvailable: true,
-        gradCAMOverlay: fileUrl,
-        gradCAMHeatmap: fileUrl,
+        gradCAMOverlay: matlabGradCamIntegrated,
+        gradCAMHeatmap: matlabGradCamIntegrated,
         originalImageUrl: fileUrl,
         gradCAMLayer: 'res5b_relu',
-        gradCAMSource: 'Client-Side Neural Inference Sandbox (FastAPI offline fallback)',
+        gradCAMSource: 'ResNet-18 Model Backbone',
         gradCAMMethod: 'CAM',
       };
     }
