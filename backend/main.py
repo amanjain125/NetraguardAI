@@ -10,10 +10,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import numpy as np
 from PIL import Image
-import onnx
-from onnx import numpy_helper
+try:
+    import onnx
+    from onnx import numpy_helper
+except Exception as e:
+    onnx = None
+    numpy_helper = None
 import onnxruntime as ort
 import matplotlib
+matplotlib.use("Agg")
 
 # Import SQLite database module
 try:
@@ -35,18 +40,30 @@ CLASS_NAMES = {
     4: "Proliferative DR",
 }
 
-# Resolve model path relative to project root
+# Resolve model path across local development and production deployment layouts
 BASE_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = BASE_DIR.parent
-MODEL_PATH = PROJECT_ROOT / "models" / "netraguard_resnet18.onnx"
 MATLAB_ARTIFACTS_DIR = BASE_DIR / "matlab_artifacts"
 
-if not MODEL_PATH.exists():
-    fallback_path = Path("models/netraguard_resnet18.onnx").resolve()
-    if fallback_path.exists():
-        MODEL_PATH = fallback_path
+potential_model_paths = [
+    PROJECT_ROOT / "models" / "netraguard_resnet18.onnx",
+    BASE_DIR / "models" / "netraguard_resnet18.onnx",
+    BASE_DIR / "netraguard_resnet18.onnx",
+    Path("models/netraguard_resnet18.onnx").resolve(),
+]
+if os.environ.get("MODEL_PATH"):
+    potential_model_paths.insert(0, Path(os.environ["MODEL_PATH"]).resolve())
 
-logger.info(f"Resolved ONNX model path: {MODEL_PATH}")
+MODEL_PATH = None
+for candidate in potential_model_paths:
+    if candidate and candidate.exists():
+        MODEL_PATH = candidate
+        break
+
+if MODEL_PATH is None:
+    MODEL_PATH = PROJECT_ROOT / "models" / "netraguard_resnet18.onnx"
+
+logger.info(f"Resolved ONNX model path: {MODEL_PATH} (exists: {MODEL_PATH.exists()})")
 
 # Global inference session & feature map extraction setup
 ort_session: Optional[ort.InferenceSession] = None
@@ -55,37 +72,72 @@ input_name: str = "data"
 output_name: str = "prob"
 feature_layer_name: str = "res5b_relu"
 
+# Attempt 1: Load pre-extracted classification weights if available
+weights_candidates = [
+    MODEL_PATH.parent / "fc5_weights.npy",
+    BASE_DIR / "models" / "fc5_weights.npy",
+    BASE_DIR / "fc5_weights.npy",
+    Path("models/fc5_weights.npy").resolve(),
+]
+for wc in weights_candidates:
+    if wc.exists():
+        try:
+            fc5_weights = np.load(str(wc))
+            logger.info(f"Loaded precomputed classification weights from '{wc}', shape: {fc5_weights.shape}")
+            break
+        except Exception as we:
+            logger.warning(f"Could not load weights from '{wc}': {we}")
+
 try:
     if not MODEL_PATH.exists():
         logger.error(f"ONNX model file not found at: {MODEL_PATH}")
     else:
-        # Load ONNX model and inspect initializers to extract classification layer weights (fc5_W)
-        onnx_model = onnx.load(str(MODEL_PATH))
-        weights_dict = {init.name: numpy_helper.to_array(init) for init in onnx_model.graph.initializer}
-        if "fc5_W" in weights_dict:
-            fc5_weights = weights_dict["fc5_W"]  # Shape: (5, 512, 1, 1)
-            logger.info(f"Successfully extracted classification weights 'fc5_W', shape: {fc5_weights.shape}")
-        else:
-            logger.warning("Could not find 'fc5_W' initializer in model graph.")
-
-        # Add res5b_relu as an additional graph output for real ResNet-18 Grad-CAM feature map extraction
-        existing_output_names = [out.name for out in onnx_model.graph.output]
-        if feature_layer_name not in existing_output_names:
-            res5b_out = onnx.helper.make_tensor_value_info(
-                feature_layer_name,
-                onnx.TensorProto.FLOAT,
-                ['BatchSize', 512, 7, 7]
+        # Check if model on disk already outputs res5b_relu
+        temp_sess = ort.InferenceSession(str(MODEL_PATH), providers=["CPUExecutionProvider"])
+        disk_outputs = [o.name for o in temp_sess.get_outputs()]
+        
+        if feature_layer_name in disk_outputs and fc5_weights is not None:
+            # Model already has dual output and weights are ready - direct zero-overhead session
+            ort_session = temp_sess
+            input_name = ort_session.get_inputs()[0].name
+            output_name = ort_session.get_outputs()[0].name
+            logger.info(
+                f"Successfully loaded native dual-output ONNX model '{MODEL_PATH.name}'. Input: '{input_name}', Output: '{output_name}', "
+                f"FeatureLayer: '{feature_layer_name}'"
             )
-            onnx_model.graph.output.append(res5b_out)
+        elif onnx is not None:
+            # ONNX package is present: load, extract weights if needed, and add res5b_relu dynamically
+            onnx_model = onnx.load(str(MODEL_PATH))
+            if fc5_weights is None:
+                weights_dict = {init.name: numpy_helper.to_array(init) for init in onnx_model.graph.initializer}
+                if "fc5_W" in weights_dict:
+                    fc5_weights = weights_dict["fc5_W"]
+                    logger.info(f"Successfully extracted classification weights 'fc5_W' from graph initializers, shape: {fc5_weights.shape}")
 
-        # Initialize ONNX Runtime session with dual output: [prob, res5b_relu]
-        ort_session = ort.InferenceSession(onnx_model.SerializeToString(), providers=["CPUExecutionProvider"])
-        input_name = ort_session.get_inputs()[0].name
-        output_name = ort_session.get_outputs()[0].name
-        logger.info(
-            f"Successfully loaded ONNX model '{MODEL_PATH.name}'. Input: '{input_name}', Output: '{output_name}', "
-            f"FeatureLayer: '{feature_layer_name}'"
-        )
+            existing_output_names = [out.name for out in onnx_model.graph.output]
+            if feature_layer_name not in existing_output_names:
+                res5b_out = onnx.helper.make_tensor_value_info(
+                    feature_layer_name,
+                    onnx.TensorProto.FLOAT,
+                    ['BatchSize', 512, 7, 7]
+                )
+                onnx_model.graph.output.append(res5b_out)
+
+            ort_session = ort.InferenceSession(onnx_model.SerializeToString(), providers=["CPUExecutionProvider"])
+            input_name = ort_session.get_inputs()[0].name
+            output_name = ort_session.get_outputs()[0].name
+            logger.info(
+                f"Successfully loaded ONNX model with dynamic feature extraction '{MODEL_PATH.name}'. Input: '{input_name}', Output: '{output_name}', "
+                f"FeatureLayer: '{feature_layer_name}'"
+            )
+        else:
+            # Fallback direct session
+            ort_session = temp_sess
+            input_name = ort_session.get_inputs()[0].name
+            output_name = ort_session.get_outputs()[0].name
+            logger.info(
+                f"Successfully loaded ONNX model via onnxruntime '{MODEL_PATH.name}'. Input: '{input_name}', Output: '{output_name}'"
+            )
 except Exception as e:
     logger.error(f"Error loading ONNX model / feature layer: {e}")
 
@@ -96,18 +148,11 @@ app = FastAPI(
     version="1.1.0",
 )
 
-# Configure CORS for local development with Vite/React frontend
+# Configure CORS for local development and deployed frontend URLs
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:5000",
-        "http://127.0.0.1:5000",
-        "*"
-    ],
+    allow_origins=["*"],
+    allow_origin_regex=r"^https?://.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
